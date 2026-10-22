@@ -56,6 +56,7 @@
 import BaseModal from './BaseModal.vue'
 import { useAuth } from '../composables/useAuth'
 import { useI18n } from '../composables/useI18n'
+import { formatDate as formatDate_ } from '../utils/format'
 
 const { currentUser, getInitials } = useAuth()
 const { t, currentLocale } = useI18n()
@@ -73,15 +74,7 @@ const close = () => {
   emit('close')
 }
 
-const formatDate = (dateString) => {
-  const date = new Date(dateString)
-  const locale = currentLocale.value === 'ja' ? 'ja-JP' : 'en-US'
-  return date.toLocaleDateString(locale, {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  })
-}
+const formatDate = (dateString) => formatDate_(dateString, { locale: currentLocale.value, month: 'long' })
 </script>
 
 <style scoped>

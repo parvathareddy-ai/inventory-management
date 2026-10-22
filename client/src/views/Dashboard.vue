@@ -1,7 +1,7 @@
 <template>
   <div class="dashboard">
     <div class="page-header">
-      <h2>{{ t('dashboard.title') }}</h2>
+      <h1>{{ t('dashboard.title') }}</h1>
     </div>
 
     <LoadingState v-if="loading" />
@@ -9,7 +9,7 @@
     <div v-else>
       <!-- Key Performance Indicators -->
       <div class="kpi-section">
-        <h3 class="section-title">{{ t('dashboard.kpi.title') }}</h3>
+        <h2 class="section-title">{{ t('dashboard.kpi.title') }}</h2>
         <div class="kpi-grid">
           <div class="kpi-card">
             <div class="kpi-header">
@@ -27,9 +27,9 @@
               <span class="kpi-label">{{ t('dashboard.kpi.ordersFulfilled') }}</span>
             </div>
             <div class="kpi-value">{{ ordersData.fulfilled }}</div>
-            <div class="kpi-goal">{{ t('dashboard.kpi.goal') }}: {{ ordersData.goal }} ({{ calculatePercentage(ordersData.fulfilled, ordersData.goal) }}%)</div>
+            <div class="kpi-goal">{{ t('dashboard.kpi.goal') }}: {{ ordersData.goal }} ({{ fulfilledPercent }}%)</div>
             <div class="kpi-progress-bar">
-              <div class="kpi-progress" :style="{ width: calculatePercentage(ordersData.fulfilled, ordersData.goal) + '%' }"></div>
+              <div class="kpi-progress" :style="{ width: fulfilledPercent + '%' }"></div>
             </div>
           </div>
 
@@ -70,7 +70,7 @@
 
       <!-- Summary Section -->
       <div class="summary-section">
-        <h3 class="section-title">{{ t('dashboard.summary.title') }}</h3>
+        <h2 class="section-title">{{ t('dashboard.summary.title') }}</h2>
       </div>
 
       <!-- Charts Grid -->
@@ -78,7 +78,7 @@
         <!-- Order Health Dashboard -->
         <div class="card chart-card">
           <div class="card-header">
-            <h3 class="card-title">{{ t('dashboard.orderHealth.title') }}</h3>
+            <h2 class="card-title">{{ t('dashboard.orderHealth.title') }}</h2>
           </div>
           <div class="chart-content">
             <div class="order-health-container">
@@ -86,20 +86,10 @@
               <div class="order-health-chart">
                 <svg viewBox="0 0 200 200" class="donut-svg-compact">
                   <circle cx="100" cy="100" r="65" fill="none" stroke="#e2e8f0" stroke-width="25"/>
-                  <circle cx="100" cy="100" r="65" fill="none" stroke="#10b981" stroke-width="25"
-                    :stroke-dasharray="`${getCircleSegment(statusData.delivered)} 408`"
-                    stroke-dashoffset="0" transform="rotate(-90 100 100)"/>
-                  <circle cx="100" cy="100" r="65" fill="none" stroke="#3b82f6" stroke-width="25"
-                    :stroke-dasharray="`${getCircleSegment(statusData.shipped)} 408`"
-                    :stroke-dashoffset="`-${getCircleSegment(statusData.delivered)}`"
-                    transform="rotate(-90 100 100)"/>
-                  <circle cx="100" cy="100" r="65" fill="none" stroke="#f59e0b" stroke-width="25"
-                    :stroke-dasharray="`${getCircleSegment(statusData.processing)} 408`"
-                    :stroke-dashoffset="`-${getCircleSegment(statusData.delivered) + getCircleSegment(statusData.shipped)}`"
-                    transform="rotate(-90 100 100)"/>
-                  <circle cx="100" cy="100" r="65" fill="none" stroke="#ef4444" stroke-width="25"
-                    :stroke-dasharray="`${getCircleSegment(statusData.backordered)} 408`"
-                    :stroke-dashoffset="`-${getCircleSegment(statusData.delivered) + getCircleSegment(statusData.shipped) + getCircleSegment(statusData.processing)}`"
+                  <!-- Segment lengths/offsets are precomputed in donutSegments -->
+                  <circle v-for="seg in donutSegments" :key="seg.key" cx="100" cy="100" r="65" fill="none"
+                    :stroke="seg.color" stroke-width="25"
+                    :stroke-dasharray="seg.dasharray" :stroke-dashoffset="seg.dashoffset"
                     transform="rotate(-90 100 100)"/>
                   <text x="100" y="90" text-anchor="middle" class="donut-center-label">{{ t('dashboard.orderHealth.total') }}</text>
                   <text x="100" y="120" text-anchor="middle" class="donut-center-value">{{ orderHealthMetrics.totalOrders }}</text>
@@ -140,7 +130,7 @@
         <!-- Inventory by Category -->
         <div class="card chart-card">
           <div class="card-header">
-            <h3 class="card-title">{{ t('dashboard.inventoryValue.title') }}</h3>
+            <h2 class="card-title">{{ t('dashboard.inventoryValue.title') }}</h2>
           </div>
           <div class="chart-content">
             <div class="horizontal-bar-chart" v-if="categoryData.length > 0">
@@ -160,7 +150,7 @@
         <!-- Inventory Shortages -->
         <div class="card chart-card full-width">
           <div class="card-header">
-            <h3 class="card-title">{{ t('dashboard.inventoryShortages.title') }} ({{ backlogItems.length }})</h3>
+            <h2 class="card-title">{{ t('dashboard.inventoryShortages.title') }} ({{ backlogItems.length }})</h2>
           </div>
           <div v-if="backlogItems.length === 0" class="no-backlog">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="success-icon">
@@ -207,7 +197,7 @@
                     </span>
                   </td>
                   <td>
-                    <span :style="{ color: item.days_delayed > 7 ? '#ef4444' : '#f59e0b', fontWeight: 600 }">
+                    <span :style="{ color: item.days_delayed > 7 ? 'var(--color-danger-text)' : 'var(--color-warning-text)', fontWeight: 600 }">
                       {{ item.days_delayed }} {{ t('dashboard.inventoryShortages.days') }}
                     </span>
                   </td>
@@ -226,6 +216,7 @@
                     </button>
                     <button
                       v-else
+                      :data-po-view="item.id"
                       @click.stop="viewPO(item)"
                       class="po-button view"
                     >
@@ -241,7 +232,7 @@
         <!-- Top Products Table -->
         <div class="card chart-card full-width">
           <div class="card-header">
-            <h3 class="card-title">{{ t('dashboard.topProducts.title') }}</h3>
+            <h2 class="card-title">{{ t('dashboard.topProducts.title') }}</h2>
           </div>
           <div class="table-container">
             <table>
@@ -273,7 +264,7 @@
                   <td>{{ translateCategory(item.category) }}</td>
                   <td>{{ item.unitsOrdered }}</td>
                   <td><strong>{{ formatCurrency(item.revenue, selectedCurrency) }}</strong></td>
-                  <td>{{ formatDate(item.firstOrderDate) }}</td>
+                  <td>{{ item.firstOrderLabel }}</td>
                   <td>
                     <span :class="['badge', getStockBadge(item.stockLevel)]">
                       {{ translateStockLevel(item.stockLevel) }}
@@ -286,6 +277,9 @@
         </div>
       </div>
     </div>
+
+    <!-- Polite announcement after a purchase order is created (always mounted so screen readers pick up the change) -->
+    <div class="visually-hidden" role="status" aria-live="polite">{{ poAnnouncement }}</div>
 
     <ProductDetailModal
       :is-open="showProductModal"
@@ -310,7 +304,7 @@
 </template>
 
 <script>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, shallowRef, onMounted, computed, watch, nextTick } from 'vue'
 import { api } from '../api'
 import { useLatestRequest } from '../composables/useLatestRequest'
 import { useFilters } from '../composables/useFilters'
@@ -318,6 +312,8 @@ import { useI18n } from '../composables/useI18n'
 import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
 import { formatCurrency } from '../utils/currency'
+import { formatDate as formatDateUtil } from '../utils/format'
+import { getOrders } from '../composables/useOrdersStore'
 import ProductDetailModal from '../components/ProductDetailModal.vue'
 import BacklogDetailModal from '../components/BacklogDetailModal.vue'
 import PurchaseOrderModal from '../components/PurchaseOrderModal.vue'
@@ -332,12 +328,13 @@ export default {
     PurchaseOrderModal,
   },
   setup() {
-    const { t, currentCurrency, translateProductName, translateWarehouse } = useI18n()
+    const { t, currentLocale, currentCurrency, translateProductName, translateWarehouse } = useI18n()
     const loading = ref(true)
     const error = ref(null)
-    const summary = ref({})
-    const allOrders = ref([])
-    const inventoryItems = ref([])
+    const summary = shallowRef({})
+    // Read-only API lists that are replaced wholesale: shallowRef avoids deep proxying of ~1k objects
+    const allOrders = shallowRef([])
+    const inventoryItems = shallowRef([])
 
     // Modal state
     const showProductModal = ref(false)
@@ -376,51 +373,102 @@ export default {
       return `$${(revenueGoal.value / 1000).toFixed(0)}K`
     })
 
-    const statusData = computed(() => {
+    // currentLocale is read here in setup (not via useI18n() per cell); computed rows below track locale changes
+    const formatDate = (dateString) => formatDateUtil(dateString, { locale: currentLocale.value })
+
+    // One pass over the orders feeds status counts, health metrics, the monthly trend and the
+    // set of ordered SKUs (previously four separate full passes).
+    const orderStats = computed(() => {
       const counts = { delivered: 0, shipped: 0, processing: 0, backordered: 0 }
-      allOrders.value.forEach(order => {
+      const monthCounts = new Array(12).fill(0)
+      const orderedSkus = new Set()
+      let totalValue = 0
+      let deliveredCount = 0
+      let onTimeDeliveries = 0
+      let totalDays = 0
+      let countWithDates = 0
+
+      for (const order of allOrders.value) {
         const status = order.status.toLowerCase()
         if (counts[status] !== undefined) counts[status]++
+        totalValue += order.total_value || 0
+
+        if (order.order_date) {
+          // getMonth() is NaN for an unparseable date; the range check skips those
+          const monthIndex = new Date(order.order_date).getMonth()
+          if (monthIndex >= 0 && monthIndex <= 11) monthCounts[monthIndex]++
+        }
+
+        if (order.items) {
+          for (const item of order.items) orderedSkus.add(item.sku)
+        }
+
+        if (status === 'delivered') {
+          deliveredCount++
+          // On-time: delivered on or before the expected date
+          if (order.actual_delivery && order.expected_delivery &&
+              new Date(order.actual_delivery) <= new Date(order.expected_delivery)) {
+            onTimeDeliveries++
+          }
+          // Fulfillment speed: days from order to delivery
+          if (order.order_date && order.actual_delivery) {
+            const days = Math.round((new Date(order.actual_delivery) - new Date(order.order_date)) / (1000 * 60 * 60 * 24))
+            totalDays += days
+            countWithDates++
+          }
+        }
+      }
+
+      return { counts, monthCounts, orderedSkus, totalValue, deliveredCount, onTimeDeliveries, totalDays, countWithDates }
+    })
+
+    const statusData = computed(() => orderStats.value.counts)
+
+    // Donut chart: precompute each ring's dash length and offset once per data change
+    const DONUT_SEGMENTS = [
+      { key: 'delivered', color: '#10b981' },
+      { key: 'shipped', color: '#3b82f6' },
+      { key: 'processing', color: '#f59e0b' },
+      { key: 'backordered', color: '#ef4444' }
+    ]
+    const donutSegments = computed(() => {
+      const counts = statusData.value
+      const total = DONUT_SEGMENTS.reduce((sum, seg) => sum + counts[seg.key], 0)
+      let consumed = 0 // arc length already drawn by earlier segments
+      return DONUT_SEGMENTS.map(seg => {
+        // 440 is the arc length constant the chart has always used for a full ring
+        const length = total > 0 ? (counts[seg.key] / total) * 440 : 0
+        const result = {
+          key: seg.key,
+          color: seg.color,
+          dasharray: `${length} 408`,
+          dashoffset: consumed === 0 ? '0' : `-${consumed}`
+        }
+        consumed += length
+        return result
       })
-      return counts
     })
 
     const orderHealthMetrics = computed(() => {
+      const stats = orderStats.value
       const totalOrders = allOrders.value.length
-      const totalValue = allOrders.value.reduce((sum, order) => sum + (order.total_value || 0), 0)
-      const avgOrderValue = totalOrders > 0 ? totalValue / totalOrders : 0
-
-      // Calculate on-time delivery rate (delivered orders that arrived on or before expected date)
-      const deliveredOrders = allOrders.value.filter(o => o.status.toLowerCase() === 'delivered')
-      const onTimeDeliveries = deliveredOrders.filter(o => {
-        if (o.actual_delivery && o.expected_delivery) {
-          return new Date(o.actual_delivery) <= new Date(o.expected_delivery)
-        }
-        return false
-      }).length
-      const onTimeRate = deliveredOrders.length > 0 ? (onTimeDeliveries / deliveredOrders.length) * 100 : 0
-
-      // Calculate average fulfillment speed (days from order to delivery for delivered orders)
-      let totalDays = 0
-      let countWithDates = 0
-      deliveredOrders.forEach(o => {
-        if (o.order_date && o.actual_delivery) {
-          const orderDate = new Date(o.order_date)
-          const deliveryDate = new Date(o.actual_delivery)
-          const days = Math.round((deliveryDate - orderDate) / (1000 * 60 * 60 * 24))
-          totalDays += days
-          countWithDates++
-        }
-      })
-      const avgFulfillmentDays = countWithDates > 0 ? totalDays / countWithDates : 0
-
+      const avgOrderValue = totalOrders > 0 ? stats.totalValue / totalOrders : 0
       return {
         totalOrders,
-        totalValue,
+        totalValue: stats.totalValue,
         avgOrderValue,
-        onTimeRate,
-        avgFulfillmentDays
+        onTimeRate: stats.deliveredCount > 0 ? (stats.onTimeDeliveries / stats.deliveredCount) * 100 : 0,
+        avgFulfillmentDays: stats.countWithDates > 0 ? stats.totalDays / stats.countWithDates : 0
       }
+    })
+
+    // sku -> first matching inventory item, built once (was an Array#find per order line)
+    const inventoryBySku = computed(() => {
+      const map = new Map()
+      for (const item of inventoryItems.value) {
+        if (!map.has(item.sku)) map.set(item.sku, item)
+      }
+      return map
     })
 
     const categoryData = computed(() => {
@@ -431,18 +479,9 @@ export default {
       // Use a single neutral slate/gray color for all categories
       const singleColor = '#64748b' // Neutral slate gray color
 
-      // Get SKUs from orders in the filtered time period
-      const orderedSkus = new Set()
-      allOrders.value.forEach(order => {
-        if (order.items) {
-          order.items.forEach(item => {
-            orderedSkus.add(item.sku)
-          })
-        }
-      })
-
       // Only include inventory items that have orders in the selected period
       // If no period is selected (all), include all inventory items
+      const orderedSkus = orderStats.value.orderedSkus
       const itemsToInclude = selectedPeriod.value === 'all'
         ? inventoryItems.value
         : inventoryItems.value.filter(item => orderedSkus.has(item.sku))
@@ -470,34 +509,10 @@ export default {
       return Math.max(...categoryData.value.map(c => c.value))
     })
 
-    const orderTrendData = computed(() => {
-      // Group orders by month from the actual data
-      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
-      // Initialize all months with 0 orders
-      const monthMap = {}
-      monthNames.forEach(month => {
-        monthMap[month] = { month, orders: 0 }
-      })
-
-      // Count orders for each month
-      if (Array.isArray(allOrders.value)) {
-        allOrders.value.forEach(order => {
-          if (order && order.order_date) {
-            const date = new Date(order.order_date)
-            const monthIndex = date.getMonth()
-            // Check if monthIndex is valid (0-11)
-            if (!isNaN(monthIndex) && monthIndex >= 0 && monthIndex <= 11) {
-              const monthName = monthNames[monthIndex]
-              monthMap[monthName].orders++
-            }
-          }
-        })
-      }
-
-      // Return all months in order
-      return monthNames.map(month => monthMap[month])
-    })
+    const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    const orderTrendData = computed(() =>
+      MONTH_NAMES.map((month, i) => ({ month, orders: orderStats.value.monthCounts[i] }))
+    )
 
     const maxOrderCount = computed(() => {
       if (orderTrendData.value.length === 0) return 10
@@ -517,8 +532,8 @@ export default {
             const sku = item.sku
 
             // Find matching inventory item to get full product details
-            // Note: inventoryItems is also filtered by API based on: warehouse, category
-            const invItem = inventoryItems.value.find(i => i.sku === sku)
+            // Note: inventoryBySku (from inventoryItems) is also filtered by API based on: warehouse, category
+            const invItem = inventoryBySku.value.get(sku)
 
             // Skip products that don't match current inventory filters
             // (e.g., if filtering by warehouse A, don't show products from warehouse B)
@@ -552,20 +567,20 @@ export default {
       // Convert to array, sort by first order date (earliest first = January at top), then by revenue, and take top 12
       return Object.values(productMap)
         .sort((a, b) => {
-          // Sort by first order date (earliest first)
-          // This ensures products first ordered in January appear before those first ordered in December
-          const dateA = new Date(a.firstOrderDate || '9999-12-31')
-          const dateB = new Date(b.firstOrderDate || '9999-12-31')
-          if (dateA.getTime() !== dateB.getTime()) {
-            return dateA.getTime() - dateB.getTime() // Earlier dates come first
-          }
+          // ISO dates (YYYY-MM-DD) order correctly as plain strings, so no Date parsing is needed.
+          // Products with no date sort last.
+          const dateA = a.firstOrderDate || '9999-12-31'
+          const dateB = b.firstOrderDate || '9999-12-31'
+          if (dateA !== dateB) return dateA < dateB ? -1 : 1 // Earlier dates come first
           // If dates are equal, sort by revenue (highest first)
           return b.revenue - a.revenue
         })
         .slice(0, 12)
+        // Format the date once per row here instead of calling formatDate for each cell per render
+        .map(p => ({ ...p, firstOrderLabel: formatDate(p.firstOrderDate) }))
     })
 
-    const allBacklogItems = ref([])
+    const allBacklogItems = shallowRef([])
 
     // Filter backlog based on inventory filters
     const backlogItems = computed(() => {
@@ -573,30 +588,48 @@ export default {
         return allBacklogItems.value
       }
 
-      // Get SKUs of items that match the filters
-      const validSkus = new Set(inventoryItems.value.map(item => item.sku))
-      return allBacklogItems.value.filter(b => validSkus.has(b.item_sku))
+      // Keep only backlog items whose SKU is in the (filtered) inventory
+      return allBacklogItems.value.filter(b => inventoryBySku.value.has(b.item_sku))
     })
 
-    // Only the newest request may apply data / loading / error; filter changes are debounced
+    // Which endpoints depend on which filters (see server/main.py):
+    //   summary: warehouse, category, status, month   orders: same (shared 60 s store)
+    //   inventory: warehouse, category only            backlog: none
+    // So a month/status change refetches only summary + orders; inventory and backlog are reused.
+    let loadedInventoryKey = null
+    let backlogLoaded = false
+    let forceReload = false // set by Retry; cleared once a response is applied
+
     const { run: loadData, trigger: scheduleLoad } = useLatestRequest(
-      () => {
+      async () => {
         const filters = getCurrentFilters()
-        return Promise.all([
+        const inventoryKey = `${filters.warehouse}|${filters.category}`
+        const needInventory = forceReload || inventoryKey !== loadedInventoryKey
+        const needBacklog = forceReload || !backlogLoaded
+        const [summaryData, ordersResult, inventoryData, backlogData] = await Promise.all([
           api.getDashboardSummary(filters),
-          api.getOrders(filters),
-          api.getInventory(filters),
-          api.getBacklog()
+          getOrders(filters),
+          needInventory ? api.getInventory(filters) : null,
+          needBacklog ? api.getBacklog() : null
         ])
+        return { summaryData, ordersResult, inventoryData, backlogData, inventoryKey }
       },
       {
         loading,
         error,
-        onData: ([summaryData, ordersData, inventoryData, backlogData]) => {
+        onData: ({ summaryData, ordersResult, inventoryData, backlogData, inventoryKey }) => {
           summary.value = summaryData
-          allOrders.value = ordersData
-          inventoryItems.value = inventoryData
-          allBacklogItems.value = backlogData
+          allOrders.value = ordersResult
+          // null means "unchanged, keep the current list"
+          if (inventoryData) {
+            inventoryItems.value = inventoryData
+            loadedInventoryKey = inventoryKey
+          }
+          if (backlogData) {
+            allBacklogItems.value = backlogData
+            backlogLoaded = true
+          }
+          forceReload = false
         },
         onError: (err) => {
           // Keep the raw message as secondary detail only; the headline is localized in the template
@@ -606,19 +639,16 @@ export default {
       }
     )
 
-    const calculatePercentage = (value, goal) => {
-      return ((value / goal) * 100).toFixed(2)
+    // Retry re-requests everything, including the parts normally reused between filter changes
+    const retryLoad = () => {
+      forceReload = true
+      return loadData()
     }
 
-    // Compute total orders once for efficiency
-    const totalOrders = computed(() => {
-      return statusData.value.delivered + statusData.value.shipped +
-             statusData.value.processing + statusData.value.backordered
-    })
-
-    const getCircleSegment = (value) => {
-      return totalOrders.value > 0 ? (value / totalOrders.value) * 440 : 0
-    }
+    // 0-100 with two decimals, used for the orders-fulfilled KPI
+    const fulfilledPercent = computed(() =>
+      ((ordersData.value.fulfilled / ordersData.value.goal) * 100).toFixed(2)
+    )
 
     const getStockBadge = (level) => {
       if (level === 'In Stock') return 'success'
@@ -657,14 +687,6 @@ export default {
       return priorityMap[priority] || priority
     }
 
-    const formatDate = (dateString) => {
-      if (!dateString) return '-'
-      const { currentLocale } = useI18n()
-      const locale = currentLocale.value === 'ja' ? 'ja-JP' : 'en-US'
-      const date = new Date(dateString)
-      return date.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' })
-    }
-
     const showProductDetail = (product) => {
       selectedProduct.value = product
       showProductModal.value = true
@@ -687,14 +709,22 @@ export default {
       showPOModal.value = true
     }
 
-    const handlePOCreated = (poData) => {
-      // Update the backlog item with the new PO ID
-      const item = allBacklogItems.value.find(b => b.id === poData.backlog_item_id)
-      if (item) {
-        item.purchase_order_id = poData.id
-        item.purchase_order = poData
-      }
+    // Live-region text announced after a purchase order is created
+    const poAnnouncement = ref('')
+
+    const handlePOCreated = async (poData) => {
+      // Replace the array and the item (instead of mutating it) so the shallowRef triggers
+      allBacklogItems.value = allBacklogItems.value.map(b =>
+        b.id === poData.backlog_item_id
+          ? { ...b, purchase_order_id: poData.id, purchase_order: poData }
+          : b
+      )
       showPOModal.value = false
+      poAnnouncement.value = t('dashboard.purchaseOrder.created', { id: poData.id })
+      // Wait for the row to re-render with its View PO button (and for the modal to hand focus
+      // back), then move focus there: the Create PO button it came from no longer exists.
+      await nextTick()
+      document.querySelector(`[data-po-view="${CSS.escape(poData.backlog_item_id)}"]`)?.focus()
     }
 
     // Watch for filter changes and reload data
@@ -707,11 +737,14 @@ export default {
       loading,
       error,
       // run() restarts the request and supersedes any in-flight one, so repeated clicks cannot race
-      retryLoad: loadData,
+      retryLoad,
       summary,
       ordersData,
       fillRate,
       statusData,
+      donutSegments,
+      fulfilledPercent,
+      poAnnouncement,
       orderHealthMetrics,
       categoryData,
       maxCategoryValue,
@@ -719,13 +752,10 @@ export default {
       maxOrderCount,
       topProducts,
       backlogItems,
-      calculatePercentage,
-      getCircleSegment,
       getStockBadge,
       translateCategory,
       translateStockLevel,
       translatePriority,
-      formatDate,
       revenueGoal,
       revenueGoalDisplay,
       showProductModal,
@@ -979,15 +1009,15 @@ export default {
 }
 
 .metric-good {
-  color: #10b981;
+  color: var(--color-success-text);
 }
 
 .metric-warning {
-  color: #f59e0b;
+  color: var(--color-warning-text);
 }
 
 .metric-bad {
-  color: #ef4444;
+  color: var(--color-danger-text);
 }
 
 .horizontal-bar-chart {
@@ -1130,12 +1160,12 @@ export default {
 .success-icon {
   width: 48px;
   height: 48px;
-  color: #10b981;
+  color: #10b981; /* icon, not text: keeps the brighter green */
 }
 
 .no-backlog-text {
   font-size: 1.125rem;
-  color: #10b981;
+  color: var(--color-success-text);
   font-weight: 600;
   margin: 0;
 }

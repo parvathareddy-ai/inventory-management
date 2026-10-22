@@ -1,9 +1,10 @@
 <template>
-  <div class="language-switcher">
+  <div class="language-switcher" @focusout="handleFocusOut" @keydown.esc="isDropdownOpen = false">
     <button
       class="language-button"
+      :aria-expanded="isDropdownOpen"
+      aria-haspopup="true"
       @click="toggleDropdown"
-      @blur="handleBlur"
     >
       <svg
         width="20"
@@ -36,7 +37,8 @@
         :key="locale"
         class="dropdown-item"
         :class="{ active: currentLocale === locale }"
-        @mousedown.prevent="selectLanguage(locale)"
+        @mousedown.prevent
+        @click="selectLanguage(locale)"
       >
         <span class="language-name">{{ getLanguageName(locale) }}</span>
         <svg
@@ -75,11 +77,11 @@ const toggleDropdown = () => {
   isDropdownOpen.value = !isDropdownOpen.value
 }
 
-const handleBlur = () => {
-  // Delay to allow mousedown events on dropdown items to fire first
-  setTimeout(() => {
-    isDropdownOpen.value = false
-  }, 200)
+// Close when focus leaves the whole menu (not when it merely moves from the toggle to an item,
+// which is what keyboard users do). Replaces the old blur + 200ms timeout, which closed the
+// menu before a Tab could reach the items.
+const handleFocusOut = (event) => {
+  if (!event.currentTarget.contains(event.relatedTarget)) isDropdownOpen.value = false
 }
 
 const selectLanguage = (locale) => {
@@ -169,7 +171,7 @@ const selectLanguage = (locale) => {
 
 .dropdown-item.active {
   background: #eff6ff;
-  color: #2563eb;
+  color: var(--color-info-text);
 }
 
 .language-name {
@@ -177,7 +179,7 @@ const selectLanguage = (locale) => {
 }
 
 .check-icon {
-  color: #2563eb;
+  color: var(--color-info-text);
   flex-shrink: 0;
 }
 </style>

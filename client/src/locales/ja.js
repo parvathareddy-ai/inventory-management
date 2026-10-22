@@ -87,7 +87,8 @@ export default {
       status: 'ステータス',
       createdDate: '作成日',
       none: 'この品目の発注書が見つかりません。',
-      error: '発注書の作成に失敗しました'
+      error: '発注書の作成に失敗しました',
+      created: '発注書 {id} を作成しました'
     },
     topProducts: {
       title: '収益別トップ製品',
@@ -486,6 +487,7 @@ export default {
   // Common
   common: {
     loading: '読み込み中...',
+    skipToContent: 'メインコンテンツへスキップ',
     loadError: 'このページの読み込み中に問題が発生しました。',
     retry: '再試行',
     error: 'エラー',

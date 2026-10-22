@@ -88,6 +88,7 @@ import { ref, reactive, computed, watch } from 'vue'
 import { api } from '../api'
 import { useI18n } from '../composables/useI18n'
 import { formatCurrencyWithDecimals } from '../utils/currency'
+import { formatDate as formatDate_ } from '../utils/format'
 
 const { t, translateProductName } = useI18n()
 
@@ -154,14 +155,8 @@ const isValid = computed(() =>
   !!form.expected_delivery_date && form.expected_delivery_date >= today.value
 )
 
-const formatDate = (s) => {
-  if (!s) return 'N/A'
-  // Parse the YYYY-MM-DD part as a local date; new Date('YYYY-MM-DD') is UTC and shows the previous day in western timezones
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s)
-  const d = m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date(s)
-  if (isNaN(d.getTime())) return s
-  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-}
+// The PO detail view is English-only today, so the locale is fixed
+const formatDate = (s) => formatDate_(s, { locale: 'en', month: 'long', empty: 'N/A' })
 const money = (n) => formatCurrencyWithDecimals(Number(n) || 0, 'USD', 2)
 
 const viewRows = computed(() => {
@@ -340,7 +335,7 @@ const submit = async () => {
 
 .info-value.mono {
   font-family: 'Monaco', 'Courier New', monospace;
-  color: #2563eb;
+  color: var(--color-info-text);
 }
 
 .badge.info {

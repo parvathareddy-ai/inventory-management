@@ -52,7 +52,7 @@
       <div class="info-item">
         <div class="info-label">{{ t('modals.inventory.unitsRemaining') }}</div>
         <div class="info-value">
-          <span :style="{ color: inventoryItem.quantity_on_hand <= inventoryItem.reorder_point ? '#ef4444' : '#10b981' }">
+          <span :style="{ color: inventoryItem.quantity_on_hand <= inventoryItem.reorder_point ? 'var(--color-danger-text)' : 'var(--color-success-text)' }">
             {{ t('modals.unitsCount', { count: inventoryItem.quantity_on_hand - inventoryItem.reorder_point }) }}
           </span>
         </div>
@@ -328,7 +328,7 @@ const getSummaryCardClass = () => {
 
 .info-value.total-value {
   font-size: 1.125rem;
-  color: #2563eb;
+  color: var(--color-info-text);
   font-weight: 700;
 }
 

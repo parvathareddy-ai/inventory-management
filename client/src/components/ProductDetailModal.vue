@@ -76,6 +76,7 @@
 import BaseModal from './BaseModal.vue'
 import { computed } from 'vue'
 import { useI18n } from '../composables/useI18n'
+import { formatDate as formatDate_ } from '../utils/format'
 
 const { t, currentLocale, currentCurrency } = useI18n()
 
@@ -100,16 +101,9 @@ const close = () => {
   emit('close')
 }
 
-const formatDate = (dateString) => {
-  if (!dateString) return t('modals.notAvailable')
-  const date = new Date(dateString)
-  if (isNaN(date.getTime())) return dateString
-  return date.toLocaleDateString(currentLocale.value === 'ja' ? 'ja-JP' : 'en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  })
-}
+// Invalid dates are shown as-is rather than "Invalid Date"
+const formatDate = (dateString) =>
+  formatDate_(dateString, { locale: currentLocale.value, month: 'long', empty: t('modals.notAvailable') })
 
 // Products with no matching inventory record have no stock numbers; show N/A instead of an unfilled placeholder
 const unitsLabel = (count) =>

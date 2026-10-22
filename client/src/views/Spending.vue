@@ -1,7 +1,7 @@
 <template>
   <div class="spending">
     <div class="page-header">
-      <h2>{{ t('finance.title') }}</h2>
+      <h1>{{ t('finance.title') }}</h1>
       <p>{{ t('finance.description') }}</p>
     </div>
 
@@ -38,7 +38,7 @@
       <!-- Monthly Revenue vs Cost Chart -->
       <div class="card chart-card">
         <div class="card-header">
-          <h3 class="card-title">{{ t('finance.revenueVsCosts.title') }}</h3>
+          <h2 class="card-title">{{ t('finance.revenueVsCosts.title') }}</h2>
           <div class="chart-legend">
             <span class="legend-item"><span class="legend-dot revenue-color"></span>{{ t('finance.revenueVsCosts.revenue') }}</span>
             <span class="legend-item"><span class="legend-dot cost-color"></span>{{ t('finance.revenueVsCosts.costs') }}</span>
@@ -69,7 +69,7 @@
       <!-- Monthly Cost Flow Chart -->
       <div class="card chart-card">
         <div class="card-header">
-          <h3 class="card-title">{{ t('finance.monthlyCostFlow.title') }}</h3>
+          <h2 class="card-title">{{ t('finance.monthlyCostFlow.title') }}</h2>
           <div class="chart-legend">
             <span class="legend-item"><span class="legend-dot procurement"></span>{{ t('finance.monthlyCostFlow.procurement') }}</span>
             <span class="legend-item"><span class="legend-dot operational"></span>{{ t('finance.monthlyCostFlow.operational') }}</span>
@@ -114,7 +114,7 @@
         <!-- Category Spending Breakdown -->
         <div class="card">
           <div class="card-header">
-            <h3 class="card-title">{{ t('finance.categorySpending.title') }}</h3>
+            <h2 class="card-title">{{ t('finance.categorySpending.title') }}</h2>
           </div>
           <div class="category-list">
             <div v-for="category in categorySpending" :key="category.category" class="category-item">
@@ -138,7 +138,7 @@
         <!-- Recent Transactions -->
         <div class="card transactions-card">
           <div class="card-header">
-            <h3 class="card-title">{{ t('finance.transactions.title') }}</h3>
+            <h2 class="card-title">{{ t('finance.transactions.title') }}</h2>
           </div>
           <div class="transactions-table-container">
             <table class="transactions-table">
@@ -216,7 +216,7 @@
 </template>
 
 <script>
-import { ref, onMounted, computed } from 'vue'
+import { ref, shallowRef, onMounted, computed } from 'vue'
 import { api } from '../api'
 import { useFilters } from '../composables/useFilters'
 import { useI18n } from '../composables/useI18n'
@@ -224,7 +224,8 @@ import { useLatestRequest } from '../composables/useLatestRequest'
 import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
 import BaseModal from '../components/BaseModal.vue'
-import { formatCurrency as formatCurrencyUtil } from '../utils/currency'
+import { currencyFormatter } from '../utils/format'
+import { getOrders } from '../composables/useOrdersStore'
 import CostDetailModal from '../components/CostDetailModal.vue'
 
 export default {
@@ -239,11 +240,13 @@ export default {
     const { t, currentCurrency } = useI18n()
     const loading = ref(true)
     const error = ref(null)
-    const allMonthlySpending = ref([])
-    const allCategorySpending = ref([])
-    const allTransactions = ref([])
-    const summaryData = ref({})
-    const allOrders = ref([])
+    // Read-only API payloads replaced wholesale on load: shallowRef avoids deep proxying
+    const allMonthlySpending = shallowRef([])
+    const allCategorySpending = shallowRef([])
+    const allTransactions = shallowRef([])
+    const summaryData = shallowRef({})
+    // Unfiltered orders (shared, frozen list from the orders store: never mutate)
+    const allOrders = shallowRef([])
 
     // Modal state
     const showCostModal = ref(false)
@@ -406,7 +409,7 @@ export default {
         api.getMonthlySpending(),
         api.getCategorySpending(),
         api.getTransactions(),
-        api.getOrders()
+        getOrders()
       ]),
       {
         loading,
@@ -426,9 +429,7 @@ export default {
       }
     )
 
-    const formatCurrency = (value) => {
-      return formatCurrencyUtil(value, currentCurrency.value)
-    }
+    const formatCurrency = currencyFormatter(currentCurrency)
 
     const currencySymbol = computed(() => {
       return currentCurrency.value === 'JPY' ? '¥' : '$'
@@ -442,13 +443,6 @@ export default {
     const getRevenueBarHeight = (value) => {
       const maxValue = maxRevenueValue.value * 1000
       return (value / maxValue) * 100
-    }
-
-    const formatDate = (dateString) => {
-      return new Date(dateString).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric'
-      })
     }
 
     const formatDateShort = (dateString) => {
@@ -527,7 +521,6 @@ export default {
       currencySymbol,
       getBarHeight,
       getRevenueBarHeight,
-      formatDate,
       formatDateShort,
       translateMonth,
       translateCategory,
@@ -553,11 +546,11 @@ export default {
 }
 
 .stat-change.positive {
-  color: #059669;
+  color: var(--color-success-text);
 }
 
 .stat-change.negative {
-  color: #dc2626;
+  color: var(--color-danger-text);
 }
 
 .change-icon {
@@ -785,7 +778,7 @@ export default {
 
 .category-amount {
   font-weight: 700;
-  color: #2563eb;
+  color: var(--color-info-text);
   font-size: 1.125rem;
 }
 
@@ -819,11 +812,11 @@ export default {
 }
 
 .change.positive {
-  color: #059669;
+  color: var(--color-success-text);
 }
 
 .change.negative {
-  color: #dc2626;
+  color: var(--color-danger-text);
 }
 
 .transactions-card {

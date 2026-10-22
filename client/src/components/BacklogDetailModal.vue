@@ -75,6 +75,7 @@
 import BaseModal from './BaseModal.vue'
 import { computed } from 'vue'
 import { useI18n } from '../composables/useI18n'
+import { formatDate as formatDate_ } from '../utils/format'
 
 const { t, currentLocale, translateProductName } = useI18n()
 
@@ -100,17 +101,9 @@ const close = () => {
   emit('close')
 }
 
-const formatDate = (dateString) => {
-  if (!dateString) return t('modals.notAvailable')
-  const date = new Date(dateString)
-  // Invalid dates are shown as-is rather than "Invalid Date"
-  if (isNaN(date.getTime())) return dateString
-  return date.toLocaleDateString(currentLocale.value === 'ja' ? 'ja-JP' : 'en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  })
-}
+// Invalid dates are shown as-is rather than "Invalid Date"
+const formatDate = (dateString) =>
+  formatDate_(dateString, { locale: currentLocale.value, month: 'long', empty: t('modals.notAvailable') })
 </script>
 
 <style scoped>
@@ -218,11 +211,11 @@ const formatDate = (dateString) => {
 }
 
 .summary-card.danger .summary-value {
-  color: #dc2626;
+  color: var(--color-danger-text);
 }
 
 .summary-card.warning .summary-value {
-  color: #f59e0b;
+  color: var(--color-warning-text);
 }
 
 .info-grid {
@@ -254,7 +247,7 @@ const formatDate = (dateString) => {
 .info-value.order-id,
 .info-value.sku {
   font-family: 'Monaco', 'Courier New', monospace;
-  color: #2563eb;
+  color: var(--color-info-text);
 }
 
 .btn-secondary {

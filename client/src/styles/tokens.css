@@ -28,6 +28,14 @@
   --color-danger: #dc2626;
   --color-danger-soft: #fef2f2;
 
+  /* Status TEXT colors: darker shades that reach WCAG AA (>= 4.5:1) on white and on the soft
+     tints above (min 4.59:1, on --color-danger-soft / --color-info-soft). Use these for text only;
+     keep the brighter --color-* hues for chart fills, borders, dots and icons. */
+  --color-success-text: #15803d;
+  --color-warning-text: #b45309;
+  --color-danger-text: #b91c1c;
+  --color-info-text: #1d4ed8;
+
   /* Sidebar (dark rail; swap to light values for a light sidebar) */
   --sidebar-bg: #0f172a;
   --sidebar-text: #cbd5e1;

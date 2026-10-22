@@ -1,14 +1,29 @@
 import math
+import os
 import threading
 from datetime import date, timedelta
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from typing import List, Optional
 from pydantic import BaseModel, Field
 from mock_data import inventory_items, orders, demand_forecasts, backlog_items, spending_summary, monthly_spending, category_spending, recent_transactions, purchase_orders, restocking_catalog
 
-app = FastAPI(title="Factory Inventory Management System")
+# Interactive docs (/docs, /redoc, /openapi.json) are useful locally but advertise every write
+# endpoint, so they can be switched off with API_DOCS=0 wherever the API is reachable by others
+DOCS_ENABLED = os.environ.get("API_DOCS", "1") != "0"
+
+app = FastAPI(
+    title="Factory Inventory Management System",
+    docs_url="/docs" if DOCS_ENABLED else None,
+    redoc_url="/redoc" if DOCS_ENABLED else None,
+    openapi_url="/openapi.json" if DOCS_ENABLED else None,
+)
+
+# JSON list responses are very repetitive (the full orders list compresses roughly 10x);
+# tiny responses are left alone because compressing them costs more than it saves
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Quarter mapping for date filtering
 QUARTER_MAP = {

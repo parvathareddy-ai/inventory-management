@@ -1,7 +1,7 @@
 <template>
   <div class="restocking">
     <div class="page-header">
-      <h2>{{ t('restocking.title') }}</h2>
+      <h1>{{ t('restocking.title') }}</h1>
       <p>{{ t('restocking.description') }}</p>
     </div>
 
@@ -61,7 +61,7 @@
 
       <div class="card">
         <div class="card-header">
-          <h3 class="card-title">{{ t('restocking.recommendations') }} ({{ recommendations.items.length }})</h3>
+          <h2 class="card-title">{{ t('restocking.recommendations') }} ({{ recommendations.items.length }})</h2>
           <button
             type="button"
             class="place-order-btn"
@@ -111,7 +111,7 @@
 </template>
 
 <script>
-import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, shallowRef, watch, onMounted, onBeforeUnmount } from 'vue'
 import { api } from '../api'
 import { useI18n } from '../composables/useI18n'
 import LoadingState from '../components/LoadingState.vue'
@@ -128,7 +128,7 @@ export default {
 
     // Budget is always held in USD; conversion happens only at display time
     const budget = ref(25000)
-    const recommendations = ref(null)
+    const recommendations = shallowRef(null)
     const loading = ref(true)
     const error = ref(null)
     const submitting = ref(false)

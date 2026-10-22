@@ -4,8 +4,8 @@ import { useI18n } from './useI18n'
 // Base user data (language-independent)
 const baseUserData = {
   id: 1,
-  email: 'john.doe@catalystcomponents.com',
-  phone: '+1 (111) 111-1111',
+  email: 'john.doe@example.com',
+  phone: '+1 (555) 010-0100',
   avatar: null,
   joinDate: '2022-03-15'
 }

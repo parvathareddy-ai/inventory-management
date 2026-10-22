@@ -164,3 +164,23 @@ class TestRestockRace:
             for line in order["items"] if line["sku"] == item["sku"]
         )
         assert ordered == item["shortfall"]
+
+
+class TestResponseCompression:
+    """Test suite for gzip compression of API responses."""
+
+    def test_large_response_is_gzipped(self, client):
+        """Test that the orders list is compressed when the client accepts gzip."""
+        response = client.get("/api/orders", headers={"Accept-Encoding": "gzip"})
+        assert response.status_code == 200
+        assert response.headers.get("content-encoding") == "gzip"
+        # httpx decompresses transparently, so the body is still valid JSON
+        assert isinstance(response.json(), list)
+
+    def test_small_response_not_gzipped(self, client):
+        """Test that responses under the size threshold are sent uncompressed."""
+        # The task list is empty here (reset_state), so its body is just "[]"
+        response = client.get("/api/tasks", headers={"Accept-Encoding": "gzip"})
+        assert response.status_code == 200
+        assert response.json() == []
+        assert "content-encoding" not in response.headers

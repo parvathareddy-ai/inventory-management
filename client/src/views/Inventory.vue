@@ -1,7 +1,7 @@
 <template>
   <div class="inventory">
     <div class="page-header">
-      <h2>{{ t('inventory.title') }}</h2>
+      <h1>{{ t('inventory.title') }}</h1>
       <p>{{ t('inventory.description') }}</p>
     </div>
 
@@ -10,7 +10,7 @@
     <div v-else>
       <div class="card">
         <div class="card-header">
-          <h3 class="card-title">{{ t('inventory.stockLevels') }} ({{ filteredItems.length }} {{ t('inventory.skus') }})</h3>
+          <h2 class="card-title">{{ t('inventory.stockLevels') }} ({{ filteredItems.length }} {{ t('inventory.skus') }})</h2>
           <div class="header-actions">
           <div class="search-box">
             <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
@@ -106,7 +106,7 @@
 </template>
 
 <script>
-import { ref, onMounted, watch, computed } from 'vue'
+import { ref, shallowRef, onMounted, watch, computed } from 'vue'
 import { api } from '../api'
 import { useLatestRequest } from '../composables/useLatestRequest'
 import { useFilters } from '../composables/useFilters'
@@ -132,7 +132,7 @@ export default {
 
     const loading = ref(true)
     const error = ref(null)
-    const items = ref([])
+    const items = shallowRef([])
     const searchQuery = ref('')
 
     // Modal state
@@ -288,7 +288,7 @@ export default {
   margin-bottom: 1.5rem;
 }
 
-.page-header h2 {
+.page-header h1 {
   margin-bottom: 0.25rem;
 }
 

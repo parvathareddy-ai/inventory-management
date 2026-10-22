@@ -10,6 +10,8 @@ npm run dev
 # Runs on http://localhost:3000
 ```
 
+API base URL defaults to `http://localhost:8001/api`; override with `VITE_API_BASE_URL` (see `.env.example`).
+
 ## Development Best Practices
 
 ### Vue 3 Composition API Patterns

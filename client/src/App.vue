@@ -1,5 +1,7 @@
 <template>
   <div class="app">
+    <!-- First focusable element: lets keyboard users bypass the sidebar and filters -->
+    <a href="#main-content" class="skip-link" @click.prevent="focusMain">{{ t('common.skipToContent') }}</a>
     <AppSidebar
       :brand-name="t('nav.companyName')"
       :brand-subtitle="t('nav.subtitle')"
@@ -17,7 +19,7 @@
     </AppSidebar>
     <div class="app-main">
       <FilterBar />
-      <main class="main-content">
+      <main id="main-content" class="main-content" tabindex="-1">
         <router-view />
       </main>
     </div>
@@ -160,8 +162,12 @@ export default {
 
     onMounted(loadTasks)
 
+    // href="#..." is intercepted (router history mode would rewrite the URL); move focus directly
+    const focusMain = () => document.getElementById('main-content')?.focus()
+
     return {
       t,
+      focusMain,
       navSections,
       logoutNoticeVisible,
       showProfileDetails,
@@ -205,6 +211,41 @@ body {
 /* The accent blue is only ~3.9:1 on the dark sidebar, so use a lighter blue there */
 .sidebar :where(button, a, input, select, textarea, [tabindex]):focus-visible {
   outline-color: #93c5fd;
+}
+
+/* Screen-reader-only text (e.g. live-region announcements) */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Visually hidden until focused, then pinned top-left above everything */
+.skip-link {
+  position: fixed;
+  top: var(--space-2);
+  left: var(--space-2);
+  z-index: 3000;
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-surface);
+  color: var(--color-accent);
+  font-weight: 600;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.25);
+  transform: translateY(-200%);
+}
+.skip-link:focus {
+  transform: none;
+}
+/* <main> is only a programmatic focus target (tabindex -1), not a control: no ring */
+.main-content:focus {
+  outline: none;
 }
 
 /* Transient notice (e.g. logout) pinned to the bottom of the viewport */
@@ -278,7 +319,7 @@ body {
 .sidebar.collapsed .sidebar-footer .profile-button { justify-content: center; padding-inline: 0; }
 
 .page-header { margin-bottom: var(--space-6); }
-.page-header h2 {
+.page-header h1 {
   font-size: var(--text-2xl);
   font-weight: 700;
   color: var(--color-text);

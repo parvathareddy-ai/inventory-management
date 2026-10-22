@@ -1,7 +1,10 @@
 // Small, dependency-free CSV helpers (RFC 4180) reusable across views.
 
 // Characters that make Excel/Sheets interpret a text cell as a formula.
-const FORMULA_TRIGGER = /^[=+\-@\t\r]/
+// Spreadsheets skip leading whitespace before deciding, so " =1+1" is still a formula:
+// test the first NON-whitespace character, and also treat a leading tab/CR as a trigger
+// by itself (they are used to smuggle a formula past naive guards).
+const FORMULA_TRIGGER = /^(?:[\t\r]|\s*[=+\-@])/
 
 // Wraps a number formatted to fixed decimals so it is treated as numeric, not text.
 class NumericCell {

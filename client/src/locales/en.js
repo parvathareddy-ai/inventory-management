@@ -87,7 +87,8 @@ export default {
       status: 'Status',
       createdDate: 'Created Date',
       none: 'No purchase order found for this item.',
-      error: 'Failed to create purchase order'
+      error: 'Failed to create purchase order',
+      created: 'Purchase order {id} created'
     },
     topProducts: {
       title: 'Top Products by Revenue',
@@ -486,6 +487,7 @@ export default {
   // Common
   common: {
     loading: 'Loading...',
+    skipToContent: 'Skip to main content',
     loadError: 'Something went wrong while loading this page.',
     retry: 'Retry',
     error: 'Error',

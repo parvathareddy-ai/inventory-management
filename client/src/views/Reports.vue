@@ -1,7 +1,7 @@
 <template>
   <div class="reports">
     <div class="page-header">
-      <h2>{{ t('reports.title') }}</h2>
+      <h1>{{ t('reports.title') }}</h1>
       <p>{{ t('reports.description') }}</p>
     </div>
 
@@ -11,7 +11,7 @@
       <!-- Quarterly Performance -->
       <div class="card">
         <div class="card-header">
-          <h3 class="card-title">{{ t('reports.quarterly.title') }}</h3>
+          <h2 class="card-title">{{ t('reports.quarterly.title') }}</h2>
         </div>
         <div class="table-container">
           <table class="reports-table">
@@ -44,7 +44,7 @@
       <!-- Monthly Trends Chart -->
       <div class="card">
         <div class="card-header">
-          <h3 class="card-title">{{ t('reports.trend.title') }}</h3>
+          <h2 class="card-title">{{ t('reports.trend.title') }}</h2>
         </div>
         <div class="chart-container">
           <div class="bar-chart">
@@ -65,7 +65,7 @@
       <!-- Month-over-Month Comparison -->
       <div class="card">
         <div class="card-header">
-          <h3 class="card-title">{{ t('reports.monthOverMonth.title') }}</h3>
+          <h2 class="card-title">{{ t('reports.monthOverMonth.title') }}</h2>
         </div>
         <div class="table-container">
           <table class="reports-table">
@@ -125,7 +125,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, shallowRef, computed, onMounted } from 'vue'
 import { api } from '../api'
 import { useI18n } from '../composables/useI18n'
 import { useLatestRequest } from '../composables/useLatestRequest'
@@ -137,8 +137,8 @@ const { t, currentLocale, currentCurrency } = useI18n()
 
 const loading = ref(true)
 const error = ref(null)
-const quarterlyData = ref([])
-const monthlyData = ref([])
+const quarterlyData = shallowRef([])
+const monthlyData = shallowRef([])
 
 // Latest-wins loader: Retry spam or a slow earlier response cannot overwrite newer state
 const { run: loadData } = useLatestRequest(
@@ -385,12 +385,12 @@ const getGrowthRate = (current, previous) => {
 }
 
 .positive-change {
-  color: #16a34a;
+  color: var(--color-success-text);
   font-weight: 600;
 }
 
 .negative-change {
-  color: #dc2626;
+  color: var(--color-danger-text);
   font-weight: 600;
 }
 

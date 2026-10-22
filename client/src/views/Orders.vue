@@ -1,7 +1,7 @@
 <template>
   <div class="orders">
     <div class="page-header">
-      <h2>{{ t('orders.title') }}</h2>
+      <h1>{{ t('orders.title') }}</h1>
       <p>{{ t('orders.description') }}</p>
     </div>
 
@@ -11,25 +11,25 @@
       <div class="stats-grid">
         <div class="stat-card success">
           <div class="stat-label">{{ t('status.delivered') }}</div>
-          <div class="stat-value">{{ getOrdersByStatus('Delivered').length }}</div>
+          <div class="stat-value">{{ statusCounts.Delivered }}</div>
         </div>
         <div class="stat-card info">
           <div class="stat-label">{{ t('status.shipped') }}</div>
-          <div class="stat-value">{{ getOrdersByStatus('Shipped').length }}</div>
+          <div class="stat-value">{{ statusCounts.Shipped }}</div>
         </div>
         <div class="stat-card warning">
           <div class="stat-label">{{ t('status.processing') }}</div>
-          <div class="stat-value">{{ getOrdersByStatus('Processing').length }}</div>
+          <div class="stat-value">{{ statusCounts.Processing }}</div>
         </div>
         <div class="stat-card danger">
           <div class="stat-label">{{ t('status.backordered') }}</div>
-          <div class="stat-value">{{ getOrdersByStatus('Backordered').length }}</div>
+          <div class="stat-value">{{ statusCounts.Backordered }}</div>
         </div>
       </div>
 
       <div class="card">
         <div class="card-header">
-          <h3 class="card-title">{{ t('orders.allOrders') }} ({{ orders.length }})</h3>
+          <h2 class="card-title">{{ t('orders.allOrders') }} ({{ orders.length }})</h2>
         </div>
         <div class="table-container">
           <table class="orders-table">
@@ -45,7 +45,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="order in orders" :key="order.id">
+              <tr v-for="order in orderRows" :key="order.id">
                 <td class="col-order-number"><strong>{{ order.order_number }}</strong></td>
                 <td class="col-customer">{{ translateCustomerName(order.customer) }}</td>
                 <td class="col-items">
@@ -54,7 +54,8 @@
                       {{ t('orders.itemsCount', { count: order.items.length }) }}
                     </summary>
                     <div class="items-dropdown">
-                      <div v-for="(item, idx) in order.items" :key="idx" class="item-entry">
+                      <!-- sku can repeat within one order, so pair it with the line position -->
+                      <div v-for="(item, idx) in order.items" :key="`${item.sku}-${idx}`" class="item-entry">
                         <span class="item-name">{{ translateProductName(item.name) }}</span>
                         <span class="item-meta">{{ t('orders.quantity') }}: {{ item.quantity }} @ {{ currencySymbol }}{{ item.unit_price }}</span>
                       </div>
@@ -66,8 +67,8 @@
                     {{ t(`status.${order.status.toLowerCase()}`) }}
                   </span>
                 </td>
-                <td class="col-date">{{ formatDate(order.order_date) }}</td>
-                <td class="col-date">{{ formatDate(order.expected_delivery) }}</td>
+                <td class="col-date">{{ order.orderDateLabel }}</td>
+                <td class="col-date">{{ order.expectedDeliveryLabel }}</td>
                 <td class="col-value"><strong>{{ currencySymbol }}{{ order.total_value.toLocaleString() }}</strong></td>
               </tr>
             </tbody>
@@ -78,7 +79,7 @@
       <!-- Restocking orders: loaded once on mount, independent of the filters above -->
       <div class="card">
         <div class="card-header">
-          <h3 class="card-title">{{ t('orders.submittedOrders') }} ({{ submittedOrders.length }})</h3>
+          <h2 class="card-title">{{ t('orders.submittedOrders') }} ({{ submittedOrders.length }})</h2>
         </div>
         <ErrorState
           v-if="submittedError"
@@ -159,27 +160,29 @@
 </template>
 
 <script>
-import { ref, onMounted, watch, computed } from 'vue'
+import { ref, shallowRef, onMounted, watch, computed } from 'vue'
 import { api } from '../api'
 import { useLatestRequest } from '../composables/useLatestRequest'
 import { useFilters } from '../composables/useFilters'
 import { useI18n } from '../composables/useI18n'
 import LoadingState from '../components/LoadingState.vue'
 import ErrorState from '../components/ErrorState.vue'
-import { formatCurrency as formatCurrencyUtil } from '../utils/currency'
+import { getOrders } from '../composables/useOrdersStore'
+import { formatDate as formatDateUtil, currencyFormatter } from '../utils/format'
 
 export default {
   name: 'Orders',
   components: { LoadingState, ErrorState },
   setup() {
-    const { t, currentCurrency, translateProductName, translateCustomerName } = useI18n()
+    const { t, currentLocale, currentCurrency, translateProductName, translateCustomerName } = useI18n()
 
     const currencySymbol = computed(() => {
       return currentCurrency.value === 'JPY' ? '¥' : '$'
     })
     const loading = ref(true)
     const error = ref(null)
-    const orders = ref([])
+    // Replaced wholesale on each load, never mutated: shallowRef skips deep proxying
+    const orders = shallowRef([])
 
     // Use shared filters
     const {
@@ -192,17 +195,16 @@ export default {
 
     // Only the newest request may apply data / loading / error; filter changes are debounced
     const { run: loadOrders, trigger: scheduleLoad } = useLatestRequest(
-      () => api.getOrders(getCurrentFilters()),
+      () => getOrders(getCurrentFilters()),
       {
         loading,
         error,
         onData: (fetchedOrders) => {
-          // Sort orders by order_date (earliest first)
-          orders.value = fetchedOrders.sort((a, b) => {
-            const dateA = new Date(a.order_date)
-            const dateB = new Date(b.order_date)
-            return dateA - dateB
-          })
+          // Sort orders by order_date (earliest first). The array is shared (and frozen) by the
+          // orders store, so sort a copy; ISO dates compare correctly as strings.
+          orders.value = [...fetchedOrders].sort((a, b) =>
+            a.order_date < b.order_date ? -1 : a.order_date > b.order_date ? 1 : 0
+          )
         },
         onError: (err) => {
           // Keep the raw message as secondary detail only; the headline is localized in the template
@@ -215,9 +217,23 @@ export default {
     // Watch for filter changes and reload data
     watch([selectedPeriod, selectedLocation, selectedCategory, selectedStatus], scheduleLoad)
 
-    const getOrdersByStatus = (status) => {
-      return orders.value.filter(order => order.status === status)
-    }
+    // One pass for all four stat cards (was one .filter per card per render)
+    const statusCounts = computed(() => {
+      const counts = { Delivered: 0, Shipped: 0, Processing: 0, Backordered: 0 }
+      for (const order of orders.value) {
+        if (counts[order.status] !== undefined) counts[order.status]++
+      }
+      return counts
+    })
+
+    // Rows with dates formatted once per data/locale change instead of per cell per render
+    const orderRows = computed(() =>
+      orders.value.map(order => ({
+        ...order,
+        orderDateLabel: formatDate(order.order_date),
+        expectedDeliveryLabel: formatDate(order.expected_delivery)
+      }))
+    )
 
     const getOrderStatusClass = (status) => {
       const statusMap = {
@@ -229,22 +245,10 @@ export default {
       return statusMap[status] || 'info'
     }
 
-    const formatDate = (dateString) => {
-      const { currentLocale } = useI18n()
-      const locale = currentLocale.value === 'ja' ? 'ja-JP' : 'en-US'
-      // A bare YYYY-MM-DD is parsed as UTC midnight, which displays a day early in
-      // timezones behind UTC; building it from parts keeps it on the intended local day
-      const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateString)
-      const date = dateOnly ? new Date(+dateOnly[1], +dateOnly[2] - 1, +dateOnly[3]) : new Date(dateString)
-      return date.toLocaleDateString(locale, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      })
-    }
+    const formatDate = (dateString) => formatDateUtil(dateString, { locale: currentLocale.value })
 
     // Submitted restocking orders (independent of the filters)
-    const submittedOrders = ref([])
+    const submittedOrders = shallowRef([])
     const submittedLoading = ref(true)
     const submittedError = ref(null)
     // Set of order ids whose per-item detail row is open
@@ -279,7 +283,7 @@ export default {
     }
 
     // Server amounts are USD; convert for display
-    const formatCurrency = (value) => formatCurrencyUtil(value, currentCurrency.value)
+    const formatCurrency = currencyFormatter(currentCurrency)
 
     onMounted(() => {
       loadOrders()
@@ -293,7 +297,8 @@ export default {
       // run() restarts the request and supersedes any in-flight one, so repeated clicks cannot race
       retryLoad: loadOrders,
       orders,
-      getOrdersByStatus,
+      orderRows,
+      statusCounts,
       getOrderStatusClass,
       formatDate,
       formatCurrency,
@@ -332,13 +337,13 @@ export default {
   border: none;
   padding: 0;
   cursor: pointer;
-  color: #3b82f6;
+  color: var(--color-info-text);
   font-weight: 500;
   font-size: inherit;
 }
 
 .expand-btn:hover {
-  color: #2563eb;
+  color: var(--color-info-text);
   text-decoration: underline;
 }
 
@@ -405,7 +410,7 @@ export default {
 
 .items-summary {
   cursor: pointer;
-  color: #3b82f6;
+  color: var(--color-info-text);
   font-weight: 500;
   list-style: none;
   user-select: none;
@@ -429,7 +434,7 @@ export default {
 }
 
 .items-summary:hover {
-  color: #2563eb;
+  color: var(--color-info-text);
   text-decoration: underline;
 }
 

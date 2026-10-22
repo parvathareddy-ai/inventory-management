@@ -1,7 +1,7 @@
 <template>
   <div class="demand">
     <div class="page-header">
-      <h2>{{ t('demand.title') }}</h2>
+      <h1>{{ t('demand.title') }}</h1>
       <p>{{ t('demand.description') }}</p>
     </div>
 
@@ -69,7 +69,7 @@
 
       <div class="card">
         <div class="card-header">
-          <h3 class="card-title">{{ t('demand.demandForecasts') }}</h3>
+          <h2 class="card-title">{{ t('demand.demandForecasts') }}</h2>
         </div>
         <div class="table-container">
           <table>
@@ -111,7 +111,7 @@
 </template>
 
 <script>
-import { ref, onMounted, watch, computed } from 'vue'
+import { ref, shallowRef, onMounted, watch, computed } from 'vue'
 import { api } from '../api'
 import { useLatestRequest } from '../composables/useLatestRequest'
 import { useFilters } from '../composables/useFilters'
@@ -126,8 +126,8 @@ export default {
     const { t } = useI18n()
     const loading = ref(true)
     const error = ref(null)
-    const allForecasts = ref([])
-    const inventoryItems = ref([])
+    const allForecasts = shallowRef([])
+    const inventoryItems = shallowRef([])
 
     // Use shared filters
     const { selectedLocation, selectedCategory, getCurrentFilters } = useFilters()
@@ -188,12 +188,12 @@ export default {
 
       // If change is within ±2%, consider it stable and show blue
       if (changePercent <= 2) {
-        return '#3b82f6' // Blue for stable
+        return 'var(--color-info-text)' // Blue for stable
       }
 
-      if (change > 0) return '#10b981' // Green for increasing
-      if (change < 0) return '#ef4444' // Red for decreasing
-      return '#3b82f6' // Blue for no change
+      if (change > 0) return 'var(--color-success-text)' // Green for increasing
+      if (change < 0) return 'var(--color-danger-text)' // Red for decreasing
+      return 'var(--color-info-text)' // Blue for no change
     }
 
     const translatePeriod = (period) => {
@@ -287,17 +287,17 @@ export default {
 
 .increasing-card .trend-icon {
   background: #d1fae5;
-  color: #059669;
+  color: var(--color-success-text);
 }
 
 .stable-card .trend-icon {
   background: #dbeafe;
-  color: #2563eb;
+  color: var(--color-info-text);
 }
 
 .decreasing-card .trend-icon {
   background: #fee2e2;
-  color: #dc2626;
+  color: var(--color-danger-text);
 }
 
 .trend-label {
@@ -353,15 +353,15 @@ export default {
 }
 
 .increasing-card .item-change {
-  color: #059669;
+  color: var(--color-success-text);
 }
 
 .stable-card .item-change {
-  color: #3b82f6;
+  color: var(--color-info-text);
 }
 
 .decreasing-card .item-change {
-  color: #dc2626;
+  color: var(--color-danger-text);
 }
 
 .item-change.neutral {
