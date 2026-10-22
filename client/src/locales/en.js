@@ -6,6 +6,7 @@ export default {
     orders: 'Orders',
     finance: 'Finance',
     demandForecast: 'Demand Forecast',
+    restocking: 'Restocking',
     companyName: 'Catalyst Components',
     subtitle: 'Inventory Management System'
   },
@@ -57,6 +58,30 @@ export default {
       unitsShort: 'units short',
       days: 'days'
     },
+    purchaseOrder: {
+      create: 'Create PO',
+      view: 'View PO',
+      createTitle: 'Create Purchase Order',
+      viewTitle: 'Purchase Order Details',
+      item: 'Backlog Item',
+      order: 'Order',
+      shortage: 'Shortage',
+      supplier: 'Supplier Name',
+      quantity: 'Quantity',
+      unitCost: 'Unit Cost',
+      expectedDelivery: 'Expected Delivery Date',
+      notes: 'Notes (optional)',
+      totalCost: 'Total Cost',
+      submit: 'Create Purchase Order',
+      submitting: 'Creating...',
+      cancel: 'Cancel',
+      close: 'Close',
+      poId: 'PO ID',
+      status: 'Status',
+      createdDate: 'Created Date',
+      none: 'No purchase order found for this item.',
+      error: 'Failed to create purchase order'
+    },
     topProducts: {
       title: 'Top Products by Revenue',
       sku: 'SKU',
@@ -80,6 +105,8 @@ export default {
     skus: 'SKUs',
     searchPlaceholder: 'Search by item name...',
     clearSearch: 'Clear search',
+    exportCsv: 'Export CSV',
+    exportCsvTooltip: 'Download the rows currently shown as a CSV file',
     totalItems: 'Total Items',
     totalValue: 'Total Value',
     lowStockItems: 'Low Stock Items',
@@ -106,6 +133,23 @@ export default {
     title: 'Orders',
     description: 'View and manage customer orders',
     allOrders: 'All Orders',
+    submittedOrders: 'Submitted Orders',
+    noSubmittedOrders: 'No restocking orders have been submitted yet.',
+    submittedError: 'Failed to load submitted orders',
+    perItemLeadTimes: 'Per-item lead times',
+    leadTimeDays: '{days} days',
+    submitted: {
+      orderId: 'Order ID',
+      orderDate: 'Order Date',
+      items: 'Items',
+      total: 'Total',
+      leadTime: 'Lead Time (days)',
+      expectedDelivery: 'Expected Delivery',
+      status: 'Status',
+      sku: 'SKU',
+      quantity: 'Qty',
+      supplier: 'Supplier'
+    },
     totalOrders: 'Total Orders',
     totalRevenue: 'Total Revenue',
     avgOrderValue: 'Avg Order Value',
@@ -126,6 +170,36 @@ export default {
       status: 'Status',
       expectedDelivery: 'Expected Delivery',
       actualDelivery: 'Actual Delivery'
+    }
+  },
+
+  // Restocking
+  restocking: {
+    title: 'Restocking',
+    description: 'Plan a restocking order within your budget based on demand trends and stock shortfalls',
+    budget: 'Budget',
+    budgetSlider: 'Restocking budget',
+    plannedSpend: 'Planned Spend',
+    remainingBudget: 'Remaining Budget',
+    itemsPlanned: '{count} items planned',
+    recommendations: 'Recommended Items',
+    placeOrder: 'Place Order',
+    placingOrder: 'Placing Order...',
+    emptyState: 'This budget does not cover any recommended items. Increase the budget to see recommendations.',
+    loadError: 'Failed to load recommendations',
+    orderError: 'Failed to place order',
+    orderPlaced: 'Order placed',
+    orderConfirmation: 'Order {id} was placed. Expected delivery: {date}.',
+    viewOrders: 'View submitted orders',
+    table: {
+      sku: 'SKU',
+      item: 'Item',
+      trend: 'Trend',
+      supplier: 'Supplier',
+      quantity: 'Quantity',
+      unitCost: 'Unit Cost',
+      lineTotal: 'Line Total',
+      leadTime: 'Lead Time (days)'
     }
   },
 

@@ -11,6 +11,7 @@
       <div class="card">
         <div class="card-header">
           <h3 class="card-title">{{ t('inventory.stockLevels') }} ({{ filteredItems.length }} {{ t('inventory.skus') }})</h3>
+          <div class="header-actions">
           <div class="search-box">
             <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
@@ -31,6 +32,21 @@
                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
               </svg>
             </button>
+          </div>
+          <button
+            type="button"
+            class="export-btn"
+            :disabled="filteredItems.length === 0"
+            :title="t('inventory.exportCsvTooltip')"
+            :aria-label="t('inventory.exportCsvTooltip')"
+            @click="exportCsv"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path d="M10 2a1 1 0 011 1v8.586l2.293-2.293a1 1 0 011.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L9 11.586V3a1 1 0 011-1z" />
+              <path d="M3 15a1 1 0 011 1v1h12v-1a1 1 0 112 0v1a2 2 0 01-2 2H4a2 2 0 01-2-2v-1a1 1 0 011-1z" />
+            </svg>
+            <span>{{ t('inventory.exportCsv') }}</span>
+          </button>
           </div>
         </div>
         <div class="table-container">
@@ -88,6 +104,7 @@ import { ref, onMounted, watch, computed } from 'vue'
 import { api } from '../api'
 import { useFilters } from '../composables/useFilters'
 import { useI18n } from '../composables/useI18n'
+import { toCsv, downloadCsv, fixedNumber, localDateStamp } from '../utils/csv'
 import InventoryDetailModal from '../components/InventoryDetailModal.vue'
 
 export default {
@@ -201,6 +218,28 @@ export default {
       showItemModal.value = true
     }
 
+    // Export exactly the rows shown in the table (filters + search, table order)
+    const exportCsv = () => {
+      if (filteredItems.value.length === 0) return
+      const headers = [
+        'sku', 'itemName', 'category', 'quantityOnHand', 'reorderPoint',
+        'unitCost', 'totalValue', 'location', 'status'
+      ].map(key => t(`inventory.table.${key}`))
+      const rows = filteredItems.value.map(item => [
+        item.sku,
+        translateProductName(item.name),
+        translateCategory(item.category),
+        item.quantity_on_hand,
+        item.reorder_point,
+        // Plain numbers (no currency symbol / thousands separators) so spreadsheets parse them
+        fixedNumber(item.unit_cost),
+        fixedNumber(item.quantity_on_hand * item.unit_cost),
+        translateWarehouse(item.location),
+        getStockStatus(item)
+      ])
+      downloadCsv(`inventory-${localDateStamp()}.csv`, toCsv(headers, rows))
+    }
+
     onMounted(loadInventory)
 
     return {
@@ -216,6 +255,7 @@ export default {
       showItemModal,
       selectedItem,
       showItemDetail,
+      exportCsv,
       currencySymbol,
       translateProductName,
       translateWarehouse
@@ -254,11 +294,62 @@ export default {
   margin: 0;
 }
 
+.card-header {
+  flex-wrap: wrap;
+}
+
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3, 0.75rem);
+}
+
+.export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+  padding: 0.5rem 0.875rem;
+  border: 1px solid var(--color-border-strong, #cbd5e1);
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-surface, #fff);
+  color: var(--color-text, #0f172a);
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--transition, 150ms ease), border-color var(--transition, 150ms ease);
+}
+
+.export-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.export-btn:hover:not(:disabled) {
+  background: var(--color-bg, #f8fafc);
+  border-color: var(--color-text-muted, #64748b);
+}
+
+.export-btn:focus-visible {
+  outline: 2px solid var(--color-accent, #2563eb);
+  outline-offset: 2px;
+}
+
+.export-btn:disabled {
+  color: var(--color-text-subtle, #94a3b8);
+  background: var(--color-bg, #f8fafc);
+  border-color: var(--color-border, #e2e8f0);
+  cursor: not-allowed;
+}
+
 .search-box {
   position: relative;
   display: flex;
   align-items: center;
-  min-width: 300px;
+  width: 300px;
+  max-width: 100%;
+  flex: 0 1 auto;
 }
 
 .search-icon {

@@ -6,6 +6,7 @@ export default {
     orders: '注文',
     finance: '財務',
     demandForecast: '需要予測',
+    restocking: '補充発注',
     companyName: '触媒コンポーネンツ',
     subtitle: '在庫管理システム'
   },
@@ -57,6 +58,30 @@ export default {
       unitsShort: '単位不足',
       days: '日'
     },
+    purchaseOrder: {
+      create: '発注書を作成',
+      view: '発注書を表示',
+      createTitle: '発注書の作成',
+      viewTitle: '発注書の詳細',
+      item: '未処理品目',
+      order: '注文',
+      shortage: '不足',
+      supplier: '仕入先名',
+      quantity: '数量',
+      unitCost: '単価',
+      expectedDelivery: '納品予定日',
+      notes: '備考（任意）',
+      totalCost: '合計金額',
+      submit: '発注書を作成',
+      submitting: '作成中...',
+      cancel: 'キャンセル',
+      close: '閉じる',
+      poId: '発注書ID',
+      status: 'ステータス',
+      createdDate: '作成日',
+      none: 'この品目の発注書が見つかりません。',
+      error: '発注書の作成に失敗しました'
+    },
     topProducts: {
       title: '収益別トップ製品',
       sku: 'SKU',
@@ -80,6 +105,8 @@ export default {
     skus: 'SKU',
     searchPlaceholder: '品目名で検索...',
     clearSearch: '検索をクリア',
+    exportCsv: 'CSVエクスポート',
+    exportCsvTooltip: '現在表示されている行をCSVファイルとしてダウンロード',
     totalItems: '総品目数',
     totalValue: '総価値',
     lowStockItems: '在庫僅少品目',
@@ -106,6 +133,23 @@ export default {
     title: '注文',
     description: '顧客注文の表示と管理',
     allOrders: 'すべての注文',
+    submittedOrders: '送信済み注文',
+    noSubmittedOrders: '送信済みの補充発注はまだありません。',
+    submittedError: '送信済み注文の読み込みに失敗しました',
+    perItemLeadTimes: '品目別リードタイム',
+    leadTimeDays: '{days}日',
+    submitted: {
+      orderId: '注文ID',
+      orderDate: '注文日',
+      items: '品目',
+      total: '合計',
+      leadTime: 'リードタイム（日）',
+      expectedDelivery: '配達予定日',
+      status: 'ステータス',
+      sku: 'SKU',
+      quantity: '数量',
+      supplier: 'サプライヤー'
+    },
     totalOrders: '総注文数',
     totalRevenue: '総収益',
     avgOrderValue: '平均注文額',
@@ -126,6 +170,36 @@ export default {
       status: 'ステータス',
       expectedDelivery: '予定配達日',
       actualDelivery: '実際の配達日'
+    }
+  },
+
+  // 補充発注
+  restocking: {
+    title: '補充発注',
+    description: '需要トレンドと在庫不足に基づき、予算内で補充発注を計画します',
+    budget: '予算',
+    budgetSlider: '補充予算',
+    plannedSpend: '計画支出額',
+    remainingBudget: '残り予算',
+    itemsPlanned: '{count}品目を計画',
+    recommendations: '推奨品目',
+    placeOrder: '発注する',
+    placingOrder: '発注中...',
+    emptyState: 'この予算では推奨品目を購入できません。予算を増やすと推奨が表示されます。',
+    loadError: '推奨の読み込みに失敗しました',
+    orderError: '発注に失敗しました',
+    orderPlaced: '発注が完了しました',
+    orderConfirmation: '発注 {id} を受け付けました。配達予定日: {date}',
+    viewOrders: '送信済み注文を表示',
+    table: {
+      sku: 'SKU',
+      item: '品目',
+      trend: 'トレンド',
+      supplier: 'サプライヤー',
+      quantity: '数量',
+      unitCost: '単価',
+      lineTotal: '小計',
+      leadTime: 'リードタイム（日）'
     }
   },
 

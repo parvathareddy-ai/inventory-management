@@ -74,6 +74,81 @@
           </table>
         </div>
       </div>
+
+      <!-- Restocking orders: loaded once on mount, independent of the filters above -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">{{ t('orders.submittedOrders') }} ({{ submittedOrders.length }})</h3>
+        </div>
+        <div v-if="submittedError" class="error">{{ submittedError }}</div>
+        <div v-else-if="submittedLoading" class="loading">{{ t('common.loading') }}</div>
+        <div v-else-if="submittedOrders.length === 0" class="empty-state">
+          {{ t('orders.noSubmittedOrders') }}
+        </div>
+        <div v-else class="table-container">
+          <table class="submitted-table">
+            <thead>
+              <tr>
+                <th>{{ t('orders.submitted.orderId') }}</th>
+                <th>{{ t('orders.submitted.orderDate') }}</th>
+                <th>{{ t('orders.submitted.items') }}</th>
+                <th class="num">{{ t('orders.submitted.total') }}</th>
+                <th class="num">{{ t('orders.submitted.leadTime') }}</th>
+                <th>{{ t('orders.submitted.expectedDelivery') }}</th>
+                <th>{{ t('orders.submitted.status') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Each order renders as a summary row plus an optional detail row, so use a keyed template -->
+              <template v-for="order in submittedOrders" :key="order.id">
+                <tr>
+                  <td><strong>{{ order.id }}</strong></td>
+                  <td>{{ formatDate(order.order_date) }}</td>
+                  <td>
+                    <button
+                      type="button"
+                      class="expand-btn"
+                      :aria-expanded="isExpanded(order.id)"
+                      :title="t('orders.perItemLeadTimes')"
+                      @click="toggleExpanded(order.id)"
+                    >
+                      <span :class="['expand-icon', { open: isExpanded(order.id) }]">&#9654;</span>
+                      {{ t('orders.itemsCount', { count: order.items.length }) }}
+                    </button>
+                    <div class="sku-list">{{ order.items.map(i => i.sku).join(', ') }}</div>
+                  </td>
+                  <td class="num"><strong>{{ formatCurrency(order.total_cost) }}</strong></td>
+                  <td class="num">{{ order.overall_lead_time_days }}</td>
+                  <td>{{ formatDate(order.expected_delivery) }}</td>
+                  <td><span class="badge info">{{ order.status }}</span></td>
+                </tr>
+                <tr v-if="isExpanded(order.id)" class="detail-row">
+                  <td colspan="7">
+                    <table class="detail-table">
+                      <thead>
+                        <tr>
+                          <th>{{ t('orders.submitted.sku') }}</th>
+                          <th class="num">{{ t('orders.submitted.quantity') }}</th>
+                          <th>{{ t('orders.submitted.supplier') }}</th>
+                          <th class="num">{{ t('orders.submitted.leadTime') }}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="item in order.items" :key="item.sku">
+                          <td>{{ item.sku }}</td>
+                          <td class="num">{{ item.quantity.toLocaleString() }}</td>
+                          <td>{{ item.supplier }}</td>
+                          <td class="num">{{ item.lead_time_days }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -83,6 +158,7 @@ import { ref, onMounted, watch, computed } from 'vue'
 import { api } from '../api'
 import { useFilters } from '../composables/useFilters'
 import { useI18n } from '../composables/useI18n'
+import { formatCurrency as formatCurrencyUtil } from '../utils/currency'
 
 export default {
   name: 'Orders',
@@ -146,14 +222,50 @@ export default {
     const formatDate = (dateString) => {
       const { currentLocale } = useI18n()
       const locale = currentLocale.value === 'ja' ? 'ja-JP' : 'en-US'
-      return new Date(dateString).toLocaleDateString(locale, {
+      // A bare YYYY-MM-DD is parsed as UTC midnight, which displays a day early in
+      // timezones behind UTC; building it from parts keeps it on the intended local day
+      const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateString)
+      const date = dateOnly ? new Date(+dateOnly[1], +dateOnly[2] - 1, +dateOnly[3]) : new Date(dateString)
+      return date.toLocaleDateString(locale, {
         year: 'numeric',
         month: 'short',
         day: 'numeric'
       })
     }
 
-    onMounted(loadOrders)
+    // Submitted restocking orders (independent of the filters)
+    const submittedOrders = ref([])
+    const submittedLoading = ref(true)
+    const submittedError = ref(null)
+    // Set of order ids whose per-item detail row is open
+    const expandedIds = ref(new Set())
+
+    const loadSubmittedOrders = async () => {
+      try {
+        submittedOrders.value = await api.getSubmittedOrders()
+      } catch (err) {
+        submittedError.value = t('orders.submittedError') + ': ' + err.message
+      } finally {
+        submittedLoading.value = false
+      }
+    }
+
+    const isExpanded = (id) => expandedIds.value.has(id)
+    const toggleExpanded = (id) => {
+      // Replace the Set so the ref triggers a re-render
+      const next = new Set(expandedIds.value)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      expandedIds.value = next
+    }
+
+    // Server amounts are USD; convert for display
+    const formatCurrency = (value) => formatCurrencyUtil(value, currentCurrency.value)
+
+    onMounted(() => {
+      loadOrders()
+      loadSubmittedOrders()
+    })
 
     return {
       t,
@@ -163,6 +275,12 @@ export default {
       getOrdersByStatus,
       getOrderStatusClass,
       formatDate,
+      formatCurrency,
+      submittedOrders,
+      submittedLoading,
+      submittedError,
+      isExpanded,
+      toggleExpanded,
       currencySymbol,
       translateProductName,
       translateCustomerName
@@ -172,6 +290,61 @@ export default {
 </script>
 
 <style scoped>
+/* Submitted orders */
+.empty-state {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: #64748b;
+  font-size: 0.938rem;
+}
+
+.submitted-table th.num,
+.submitted-table td.num,
+.detail-table th.num,
+.detail-table td.num {
+  text-align: right;
+}
+
+.expand-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: #3b82f6;
+  font-weight: 500;
+  font-size: inherit;
+}
+
+.expand-btn:hover {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.expand-icon {
+  display: inline-block;
+  margin-right: 0.375rem;
+  font-size: 0.75rem;
+  transition: transform 0.2s;
+}
+
+.expand-icon.open {
+  transform: rotate(90deg);
+}
+
+.sku-list {
+  margin-top: 0.25rem;
+  font-size: 0.813rem;
+  color: #64748b;
+}
+
+.detail-row > td {
+  background: #f8fafc;
+}
+
+.detail-table {
+  width: 100%;
+}
+
 /* Fixed table layout to prevent column shifting */
 .orders-table {
   table-layout: fixed;
