@@ -1,7 +1,7 @@
 <template>
   <BaseModal
     :is-open="isOpen && !!product"
-    title="Product Details"
+    :title="t('modals.product.title')"
     @close="close"
   >
     <div class="product-header">
@@ -13,61 +13,61 @@
       </div>
       <div class="product-title-section">
         <h4 class="product-name">{{ product.name }}</h4>
-        <div class="product-sku">SKU: {{ product.sku }}</div>
+        <div class="product-sku">{{ t('modals.sku') }}: {{ product.sku }}</div>
       </div>
       <span class="stock-badge" :class="getStockBadgeClass(product.stockLevel)">
-        {{ product.stockLevel }}
+        {{ stockLabel(product.stockLevel) }}
       </span>
     </div>
 
     <div class="info-grid">
       <div class="info-item">
-        <div class="info-label">Category</div>
+        <div class="info-label">{{ t('modals.product.category') }}</div>
         <div class="info-value">{{ product.category }}</div>
       </div>
 
       <div class="info-item">
-        <div class="info-label">Warehouse</div>
+        <div class="info-label">{{ t('modals.product.warehouse') }}</div>
         <div class="info-value">{{ product.warehouse }}</div>
       </div>
 
       <div class="info-item">
-        <div class="info-label">Units Ordered</div>
+        <div class="info-label">{{ t('modals.product.unitsOrdered') }}</div>
         <div class="info-value">{{ product.unitsOrdered }}</div>
       </div>
 
       <div class="info-item">
-        <div class="info-label">Total Revenue</div>
+        <div class="info-label">{{ t('modals.product.totalRevenue') }}</div>
         <div class="info-value">{{ currencySymbol }}{{ product.revenue.toLocaleString() }}</div>
       </div>
 
       <div class="info-item">
-        <div class="info-label">Current Stock</div>
-        <div class="info-value">{{ product.quantityOnHand }} units</div>
+        <div class="info-label">{{ t('modals.product.currentStock') }}</div>
+        <div class="info-value">{{ unitsLabel(product.quantityOnHand) }}</div>
       </div>
 
       <div class="info-item">
-        <div class="info-label">Reorder Point</div>
-        <div class="info-value">{{ product.reorderPoint }} units</div>
+        <div class="info-label">{{ t('modals.product.reorderPoint') }}</div>
+        <div class="info-value">{{ unitsLabel(product.reorderPoint) }}</div>
       </div>
 
       <div class="info-item">
-        <div class="info-label">First Order Date</div>
+        <div class="info-label">{{ t('modals.product.firstOrderDate') }}</div>
         <div class="info-value">{{ formatDate(product.firstOrderDate) }}</div>
       </div>
 
       <div class="info-item">
-        <div class="info-label">Stock Status</div>
+        <div class="info-label">{{ t('modals.product.stockStatus') }}</div>
         <div class="info-value">
           <span :class="['badge', getStockBadgeClass(product.stockLevel)]">
-            {{ product.stockLevel }}
+            {{ stockLabel(product.stockLevel) }}
           </span>
         </div>
       </div>
     </div>
 
     <template #footer>
-      <button class="btn-secondary" @click="close">Close</button>
+      <button class="btn-secondary" @click="close">{{ t('common.close') }}</button>
     </template>
   </BaseModal>
 </template>
@@ -77,7 +77,7 @@ import BaseModal from './BaseModal.vue'
 import { computed } from 'vue'
 import { useI18n } from '../composables/useI18n'
 
-const { currentCurrency } = useI18n()
+const { t, currentLocale, currentCurrency } = useI18n()
 
 const currencySymbol = computed(() => {
   return currentCurrency.value === 'JPY' ? '¥' : '$'
@@ -101,13 +101,24 @@ const close = () => {
 }
 
 const formatDate = (dateString) => {
-  if (!dateString) return 'N/A'
+  if (!dateString) return t('modals.notAvailable')
   const date = new Date(dateString)
-  return date.toLocaleDateString('en-US', {
+  if (isNaN(date.getTime())) return dateString
+  return date.toLocaleDateString(currentLocale.value === 'ja' ? 'ja-JP' : 'en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric'
   })
+}
+
+// Products with no matching inventory record have no stock numbers; show N/A instead of an unfilled placeholder
+const unitsLabel = (count) =>
+  count === undefined || count === null ? t('modals.notAvailable') : t('modals.unitsCount', { count })
+
+// stockLevel arrives as an English status string from the parent; the class logic below keys on that raw value
+const stockLabel = (stockLevel) => {
+  const keys = { 'In Stock': 'inStock', 'Low Stock': 'lowStock', 'Adequate': 'adequate' }
+  return keys[stockLevel] ? t(`status.${keys[stockLevel]}`) : stockLevel
 }
 
 const getStockBadgeClass = (stockLevel) => {

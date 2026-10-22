@@ -1,12 +1,12 @@
 <template>
   <BaseModal
     :is-open="isOpen && !!costData"
-    :title="`${costData?.month ?? ''} Cost Breakdown`"
+    :title="t('modals.cost.title', { month: monthLabel })"
     @close="close"
   >
     <div class="cost-summary">
       <div class="summary-card total">
-        <div class="summary-label">Total Costs</div>
+        <div class="summary-label">{{ t('modals.cost.totalCosts') }}</div>
         <div class="summary-value">{{ currencySymbol }}{{ totalCosts.toLocaleString() }}</div>
       </div>
     </div>
@@ -21,11 +21,11 @@
             </svg>
           </div>
           <div class="cost-info">
-            <div class="cost-name">Procurement</div>
+            <div class="cost-name">{{ t('finance.monthlyCostFlow.procurement') }}</div>
             <div class="cost-amount">{{ currencySymbol }}{{ costData.procurement.toLocaleString() }}</div>
           </div>
         </div>
-        <div class="cost-percentage">{{ getProcurementPercentage() }}% of total</div>
+        <div class="cost-percentage">{{ t('modals.percentOfTotal', { percent: getProcurementPercentage() }) }}</div>
       </div>
 
       <div class="cost-item operational">
@@ -37,11 +37,11 @@
             </svg>
           </div>
           <div class="cost-info">
-            <div class="cost-name">Operational</div>
+            <div class="cost-name">{{ t('finance.monthlyCostFlow.operational') }}</div>
             <div class="cost-amount">{{ currencySymbol }}{{ costData.operational.toLocaleString() }}</div>
           </div>
         </div>
-        <div class="cost-percentage">{{ getOperationalPercentage() }}% of total</div>
+        <div class="cost-percentage">{{ t('modals.percentOfTotal', { percent: getOperationalPercentage() }) }}</div>
       </div>
 
       <div class="cost-item labor">
@@ -53,11 +53,11 @@
             </svg>
           </div>
           <div class="cost-info">
-            <div class="cost-name">Labor</div>
+            <div class="cost-name">{{ t('finance.monthlyCostFlow.labor') }}</div>
             <div class="cost-amount">{{ currencySymbol }}{{ costData.labor.toLocaleString() }}</div>
           </div>
         </div>
-        <div class="cost-percentage">{{ getLaborPercentage() }}% of total</div>
+        <div class="cost-percentage">{{ t('modals.percentOfTotal', { percent: getLaborPercentage() }) }}</div>
       </div>
 
       <div class="cost-item overhead">
@@ -68,16 +68,16 @@
             </svg>
           </div>
           <div class="cost-info">
-            <div class="cost-name">Overhead</div>
+            <div class="cost-name">{{ t('finance.monthlyCostFlow.overhead') }}</div>
             <div class="cost-amount">{{ currencySymbol }}{{ costData.overhead.toLocaleString() }}</div>
           </div>
         </div>
-        <div class="cost-percentage">{{ getOverheadPercentage() }}% of total</div>
+        <div class="cost-percentage">{{ t('modals.percentOfTotal', { percent: getOverheadPercentage() }) }}</div>
       </div>
     </div>
 
     <template #footer>
-      <button class="btn-secondary" @click="close">Close</button>
+      <button class="btn-secondary" @click="close">{{ t('common.close') }}</button>
     </template>
   </BaseModal>
 </template>
@@ -87,7 +87,7 @@ import BaseModal from './BaseModal.vue'
 import { computed } from 'vue'
 import { useI18n } from '../composables/useI18n'
 
-const { currentCurrency } = useI18n()
+const { t, currentCurrency } = useI18n()
 
 const currencySymbol = computed(() => {
   return currentCurrency.value === 'JPY' ? '¥' : '$'
@@ -105,6 +105,14 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['close'])
+
+// costData.month is a short English name ("Jan"); translate it through the months keys, falling back to the raw value
+const monthLabel = computed(() => {
+  const raw = props.costData?.month ?? ''
+  const key = `months.${String(raw).toLowerCase()}`
+  const label = t(key)
+  return label === key ? raw : label
+})
 
 const totalCosts = computed(() => {
   if (!props.costData) return 0

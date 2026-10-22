@@ -304,7 +304,6 @@ label {
 
 .task-input:focus,
 .task-select:focus {
-  outline: none;
   border-color: #667eea;
 }
 
@@ -380,8 +379,9 @@ label {
   border-left: 4px solid #2563eb;
 }
 
+/* No opacity fade: it would push the muted completed-task text under 4.5:1; strikethrough marks completion */
 .task-item.completed {
-  opacity: 0.6;
+  background: var(--color-bg);
 }
 
 .task-header {
@@ -419,7 +419,7 @@ label {
 
 .task-item.completed .task-title {
   text-decoration: line-through;
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }
 
 .task-delete-btn {
@@ -484,7 +484,7 @@ label {
 }
 
 .task-due-date svg {
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }
 
 .status-badge {

@@ -5,8 +5,8 @@
       <p>{{ t('inventory.description') }}</p>
     </div>
 
-    <div v-if="loading" class="loading">{{ t('common.loading') }}</div>
-    <div v-else-if="error" class="error">{{ error }}</div>
+    <LoadingState v-if="loading" />
+    <ErrorState v-else-if="error" :message="t('inventory.loadError')" :detail="error" @retry="retryLoad" />
     <div v-else>
       <div class="card">
         <div class="card-header">
@@ -20,6 +20,7 @@
               v-model="searchQuery"
               type="text"
               :placeholder="t('inventory.searchPlaceholder')"
+              :aria-label="t('inventory.searchPlaceholder')"
               class="search-input"
             />
             <button
@@ -110,12 +111,16 @@ import { api } from '../api'
 import { useLatestRequest } from '../composables/useLatestRequest'
 import { useFilters } from '../composables/useFilters'
 import { useI18n } from '../composables/useI18n'
+import LoadingState from '../components/LoadingState.vue'
+import ErrorState from '../components/ErrorState.vue'
 import { toCsv, downloadCsv, fixedNumber, localDateStamp } from '../utils/csv'
 import InventoryDetailModal from '../components/InventoryDetailModal.vue'
 
 export default {
   name: 'Inventory',
   components: {
+    LoadingState,
+    ErrorState,
     InventoryDetailModal
   },
   setup() {
@@ -189,7 +194,9 @@ export default {
           items.value = data
         },
         onError: (err) => {
-          error.value = 'Failed to load inventory: ' + err.message
+          // Keep the raw message as secondary detail only; the headline is localized in the template
+          console.error(err)
+          error.value = err?.message || 'Error'
         }
       }
     )
@@ -256,6 +263,8 @@ export default {
       t,
       loading,
       error,
+      // run() restarts the request and supersedes any in-flight one, so repeated clicks cannot race
+      retryLoad: loadInventory,
       items,
       searchQuery,
       filteredItems,
@@ -310,6 +319,8 @@ export default {
 
 .header-actions {
   display: flex;
+  /* Cap at the card width so the 300px search box (max-width: 100%) can shrink on narrow screens */
+  max-width: 100%;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3, 0.75rem);
@@ -347,7 +358,7 @@ export default {
 }
 
 .export-btn:disabled {
-  color: var(--color-text-subtle, #94a3b8);
+  color: var(--color-text-subtle, #64748b);
   background: var(--color-bg, #f8fafc);
   border-color: var(--color-border, #e2e8f0);
   cursor: not-allowed;
@@ -367,7 +378,7 @@ export default {
   left: 0.75rem;
   width: 18px;
   height: 18px;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   pointer-events: none;
 }
 
@@ -383,14 +394,13 @@ export default {
 }
 
 .search-input:focus {
-  outline: none;
   border-color: #3b82f6;
   background: white;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .search-input::placeholder {
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }
 
 .clear-search {
@@ -403,7 +413,7 @@ export default {
   background: transparent;
   border: none;
   border-radius: 4px;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -416,17 +426,6 @@ export default {
 .clear-search svg {
   width: 18px;
   height: 18px;
-}
-
-.loading,
-.error {
-  padding: 2rem;
-  text-align: center;
-  color: #64748b;
-}
-
-.error {
-  color: #ef4444;
 }
 
 .clickable-row {

@@ -5,7 +5,7 @@
   - Keep the icons as inline SVG using currentColor; no icon library, no emoji.
 -->
 <template>
-  <aside class="sidebar" :class="{ collapsed }" aria-label="Primary">
+  <aside class="sidebar" :class="{ collapsed }" :aria-label="navLabel">
     <div class="sidebar-brand">
       <span class="brand-mark" aria-hidden="true">{{ brandInitial }}</span>
       <span class="brand-text">
@@ -63,7 +63,8 @@ export default {
     brandSubtitle: { type: String, default: '' },
     // [{ label: 'Operations', items: [{ to: '/', label: 'Overview', icon: 'M3 12l9-9 9 9...' }] }]
     sections: { type: Array, required: true },
-    collapseLabel: { type: String, default: 'Collapse' }
+    collapseLabel: { type: String, default: 'Collapse' },
+    navLabel: { type: String, default: 'Primary' }
   },
   emits: ['update:collapsed'],
   setup(props, { emit }) {
@@ -143,7 +144,7 @@ export default {
 .brand-text strong,
 .brand-text small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .brand-text strong { color: var(--sidebar-text-active); font-size: var(--text-sm); }
-.brand-text small { color: var(--color-text-subtle); font-size: var(--text-xs); }
+.brand-text small { color: var(--sidebar-text-subtle); font-size: var(--text-xs); }
 
 .sidebar-nav { flex: 1; overflow-y: auto; overflow-x: hidden; padding: var(--space-4) var(--space-3); }
 .nav-section + .nav-section { margin-top: var(--space-5); }
@@ -154,7 +155,7 @@ export default {
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--color-text-subtle);
+  color: var(--sidebar-text-subtle);
   white-space: nowrap;
 }
 
@@ -193,7 +194,8 @@ export default {
 .nav-link:hover,
 .collapse-toggle:hover { background: var(--sidebar-item-hover); color: var(--sidebar-text-active); }
 .nav-link:focus-visible,
-.collapse-toggle:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+/* Lighter blue than the page accent: #2563eb is only ~3.6:1 on the dark sidebar */
+.collapse-toggle:focus-visible { outline: 2px solid #93c5fd; outline-offset: 2px; }
 .nav-link.router-link-active { background: var(--sidebar-item-active); color: var(--sidebar-text-active); }
 /* The exact-match check stops "/" from staying active on every route */
 .nav-link[href="/"]:not(.router-link-exact-active) { background: transparent; color: inherit; }

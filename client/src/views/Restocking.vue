@@ -37,10 +37,11 @@
       </div>
       <router-link to="/orders" class="confirmation-link">{{ t('restocking.viewOrders') }}</router-link>
     </div>
-    <div v-if="orderError" class="error">{{ orderError }}</div>
+    <!-- Not retryable: re-clicking would re-submit a purchase, so the user re-confirms via the Place Order button -->
+    <ErrorState v-if="orderError" :message="orderError" :retryable="false" />
 
-    <div v-if="loading" class="loading">{{ t('common.loading') }}</div>
-    <div v-else-if="error" class="error">{{ error }}</div>
+    <LoadingState v-if="loading" />
+    <ErrorState v-else-if="error" :message="t('restocking.loadError')" :detail="error" @retry="retryLoad" />
     <div v-else-if="recommendations">
       <div class="stats-grid">
         <div class="stat-card">
@@ -113,12 +114,15 @@
 import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { api } from '../api'
 import { useI18n } from '../composables/useI18n'
+import LoadingState from '../components/LoadingState.vue'
+import ErrorState from '../components/ErrorState.vue'
 import { formatCurrency as formatCurrencyUtil, formatCurrencyWithDecimals } from '../utils/currency'
 
 const DEBOUNCE_MS = 250
 
 export default {
   name: 'Restocking',
+  components: { LoadingState, ErrorState },
   setup() {
     const { t, currentCurrency, currentLocale, translateProductName } = useI18n()
 
@@ -172,7 +176,8 @@ export default {
       } catch (err) {
         if (seq !== requestSeq) return
         planStale.value = false
-        error.value = t('restocking.loadError') + ': ' + err.message
+        console.error(err)
+        error.value = err?.message || 'Error'
       } finally {
         if (seq === requestSeq) loading.value = false
       }
@@ -207,6 +212,13 @@ export default {
       }
     }
 
+    // Retry shows the spinner again; loadRecommendations is sequence-guarded so repeated clicks cannot race
+    const retryLoad = () => {
+      loading.value = true
+      error.value = null
+      return loadRecommendations()
+    }
+
     onMounted(loadRecommendations)
     onBeforeUnmount(() => clearTimeout(debounceTimer))
 
@@ -225,7 +237,8 @@ export default {
       formatDate,
       trendLabel,
       translateProductName,
-      placeOrder
+      placeOrder,
+      retryLoad
     }
   }
 }
@@ -263,7 +276,6 @@ export default {
   width: 100%;
   height: 6px;
   border-radius: 3px;
-  outline: none;
   cursor: pointer;
   background: linear-gradient(to right, #0f172a 0%, #0f172a var(--fill), #e2e8f0 var(--fill), #e2e8f0 100%);
 }

@@ -4,7 +4,8 @@
       :brand-name="t('nav.companyName')"
       :brand-subtitle="t('nav.subtitle')"
       :sections="navSections"
-      collapse-label="Collapse"
+      :collapse-label="t('nav.collapse')"
+      :nav-label="t('nav.primary')"
     >
       <template #footer>
         <LanguageSwitcher />
@@ -19,6 +20,11 @@
       <main class="main-content">
         <router-view />
       </main>
+    </div>
+
+    <!-- Non-blocking replacement for the old logout alert(); the mock app has no real session -->
+    <div v-if="logoutNoticeVisible" class="toast" role="status" aria-live="polite">
+      {{ t('profile.logoutNotice') }}
     </div>
 
     <ProfileDetailsModal
@@ -60,7 +66,7 @@ export default {
     AppSidebar
   },
   setup() {
-    const { currentUser } = useAuth()
+    const { currentUser, logoutNoticeVisible } = useAuth()
     const { t } = useI18n()
     const showProfileDetails = ref(false)
     const showTasks = ref(false)
@@ -134,7 +140,7 @@ export default {
     // Same routes and labels as the old top nav; icons are 24px stroke paths
     const navSections = computed(() => [
       {
-        label: 'Operations',
+        label: t('nav.operations'),
         items: [
           { to: '/', label: t('nav.overview'), icon: 'M3 10.5L12 3l9 7.5V20a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z' },
           { to: '/inventory', label: t('nav.inventory'), icon: 'M21 8l-9-5-9 5v8l9 5 9-5zM3 8l9 5 9-5M12 13v8' },
@@ -143,11 +149,11 @@ export default {
         ]
       },
       {
-        label: 'Finance & Insights',
+        label: t('nav.financeInsights'),
         items: [
           { to: '/spending', label: t('nav.finance'), icon: 'M12 2v20M17 6H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6' },
           { to: '/demand', label: t('nav.demandForecast'), icon: 'M3 17l6-6 4 4 8-8M14 7h7v7' },
-          { to: '/reports', label: 'Reports', icon: 'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M8 13h8M8 17h8' }
+          { to: '/reports', label: t('nav.reports'), icon: 'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M8 13h8M8 17h8' }
         ]
       }
     ])
@@ -157,6 +163,7 @@ export default {
     return {
       t,
       navSections,
+      logoutNoticeVisible,
       showProfileDetails,
       showTasks,
       tasks,
@@ -182,6 +189,38 @@ body {
   color: var(--color-text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/*
+ * One shared keyboard-focus indicator. Components must not set `outline: none` on :focus,
+ * or it would suppress this; mouse focus stays outline-free via the :not(:focus-visible) rule.
+ */
+:where(button, a, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+:where(button, a, input, select, textarea, summary, [tabindex]):focus:not(:focus-visible) {
+  outline: none;
+}
+/* The accent blue is only ~3.9:1 on the dark sidebar, so use a lighter blue there */
+.sidebar :where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline-color: #93c5fd;
+}
+
+/* Transient notice (e.g. logout) pinned to the bottom of the viewport */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: var(--space-6);
+  transform: translateX(-50%);
+  max-width: calc(100vw - var(--space-8));
+  padding: var(--space-3) var(--space-5);
+  background: var(--color-text);
+  color: #fff;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  font-size: var(--text-sm);
+  z-index: 2000;
 }
 
 /* Sidebar + content shell */
@@ -292,6 +331,9 @@ body {
 }
 .card-header {
   display: flex;
+  /* Wrap so header actions (search box, export button, legends) drop below the title on narrow screens */
+  flex-wrap: wrap;
+  gap: var(--space-3);
   justify-content: space-between;
   align-items: center;
   margin-bottom: var(--space-4);
@@ -345,20 +387,4 @@ tbody tr:hover { background: var(--color-bg); }
 .badge.danger, .badge.decreasing, .badge.high { background: #fecaca; color: #991b1b; }
 .badge.info, .badge.low { background: #dbeafe; color: #1e40af; }
 .badge.stable { background: #e0e7ff; color: #3730a3; }
-
-.loading {
-  text-align: center;
-  padding: var(--space-12);
-  color: var(--color-text-muted);
-  font-size: var(--text-sm);
-}
-.error {
-  background: var(--color-danger-soft);
-  border: 1px solid #fecaca;
-  color: #991b1b;
-  padding: var(--space-4);
-  border-radius: var(--radius-md);
-  margin: var(--space-4) 0;
-  font-size: var(--text-sm);
-}
 </style>

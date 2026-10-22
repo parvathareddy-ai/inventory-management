@@ -5,8 +5,8 @@
       <p>{{ t('finance.description') }}</p>
     </div>
 
-    <div v-if="loading" class="loading">{{ t('common.loading') }}</div>
-    <div v-else-if="error" class="error">{{ error }}</div>
+    <LoadingState v-if="loading" />
+    <ErrorState v-else-if="error" :message="t('finance.loadError')" :detail="error" @retry="loadData" />
     <div v-else>
       <!-- Revenue & Financial KPIs -->
       <div class="stats-grid-finance">
@@ -56,8 +56,8 @@
             <div class="chart-area">
               <div v-for="month in monthlyRevenue" :key="month.month" class="bar-group-revenue">
                 <div class="revenue-bars">
-                  <div class="revenue-bar" :style="{ height: getRevenueBarHeight(month.revenue) + '%' }" :title="`Revenue: ${currencySymbol}${month.revenue.toLocaleString()}`"></div>
-                  <div class="cost-bar" :style="{ height: getRevenueBarHeight(month.costs) + '%' }" :title="`Costs: ${currencySymbol}${month.costs.toLocaleString()}`"></div>
+                  <div class="revenue-bar" :style="{ height: getRevenueBarHeight(month.revenue) + '%' }" :title="`${t('finance.revenueVsCosts.revenue')}: ${currencySymbol}${month.revenue.toLocaleString()}`"></div>
+                  <div class="cost-bar" :style="{ height: getRevenueBarHeight(month.costs) + '%' }" :title="`${t('finance.revenueVsCosts.costs')}: ${currencySymbol}${month.costs.toLocaleString()}`"></div>
                 </div>
                 <span class="bar-label">{{ translateMonth(month.month) }}</span>
               </div>
@@ -98,10 +98,10 @@
                   @keydown.enter.self.prevent="showCostDetail(month)"
                   @keydown.space.self.prevent="showCostDetail(month)"
                 >
-                  <div class="bar-segment procurement" :style="{ height: getBarHeight(month.procurement) + '%' }" :title="`Procurement: ${currencySymbol}${month.procurement.toLocaleString()}`"></div>
-                  <div class="bar-segment operational" :style="{ height: getBarHeight(month.operational) + '%' }" :title="`Operational: ${currencySymbol}${month.operational.toLocaleString()}`"></div>
-                  <div class="bar-segment labor" :style="{ height: getBarHeight(month.labor) + '%' }" :title="`Labor: ${currencySymbol}${month.labor.toLocaleString()}`"></div>
-                  <div class="bar-segment overhead" :style="{ height: getBarHeight(month.overhead) + '%' }" :title="`Overhead: ${currencySymbol}${month.overhead.toLocaleString()}`"></div>
+                  <div class="bar-segment procurement" :style="{ height: getBarHeight(month.procurement) + '%' }" :title="`${t('finance.monthlyCostFlow.procurement')}: ${currencySymbol}${month.procurement.toLocaleString()}`"></div>
+                  <div class="bar-segment operational" :style="{ height: getBarHeight(month.operational) + '%' }" :title="`${t('finance.monthlyCostFlow.operational')}: ${currencySymbol}${month.operational.toLocaleString()}`"></div>
+                  <div class="bar-segment labor" :style="{ height: getBarHeight(month.labor) + '%' }" :title="`${t('finance.monthlyCostFlow.labor')}: ${currencySymbol}${month.labor.toLocaleString()}`"></div>
+                  <div class="bar-segment overhead" :style="{ height: getBarHeight(month.overhead) + '%' }" :title="`${t('finance.monthlyCostFlow.overhead')}: ${currencySymbol}${month.overhead.toLocaleString()}`"></div>
                 </div>
                 <span class="bar-label">{{ translateMonth(month.month) }}</span>
               </div>
@@ -176,6 +176,37 @@
       </div>
     </div>
 
+    <!-- Replaces the old blocking alert(): same BaseModal as the other detail dialogs -->
+    <BaseModal
+      :is-open="!!selectedTransaction"
+      :title="t('finance.transactionDetails')"
+      size="sm"
+      @close="selectedTransaction = null"
+    >
+      <dl v-if="selectedTransaction" class="transaction-detail">
+        <div class="detail-row">
+          <dt>{{ t('finance.transactions.id') }}</dt>
+          <dd>{{ selectedTransaction.id.toString().padStart(3, '0') }}</dd>
+        </div>
+        <div class="detail-row">
+          <dt>{{ t('finance.transactions.description') }}</dt>
+          <dd>{{ selectedTransaction.description }}</dd>
+        </div>
+        <div class="detail-row">
+          <dt>{{ t('finance.transactions.vendor') }}</dt>
+          <dd>{{ selectedTransaction.vendor }}</dd>
+        </div>
+        <div class="detail-row">
+          <dt>{{ t('finance.transactions.date') }}</dt>
+          <dd>{{ formatDateShort(selectedTransaction.date) }}</dd>
+        </div>
+        <div class="detail-row">
+          <dt>{{ t('finance.transactions.amount') }}</dt>
+          <dd>{{ currencySymbol }}{{ selectedTransaction.amount.toLocaleString() }}</dd>
+        </div>
+      </dl>
+    </BaseModal>
+
     <CostDetailModal
       :is-open="showCostModal"
       :cost-data="selectedCostData"
@@ -189,13 +220,20 @@ import { ref, onMounted, computed } from 'vue'
 import { api } from '../api'
 import { useFilters } from '../composables/useFilters'
 import { useI18n } from '../composables/useI18n'
+import { useLatestRequest } from '../composables/useLatestRequest'
+import LoadingState from '../components/LoadingState.vue'
+import ErrorState from '../components/ErrorState.vue'
+import BaseModal from '../components/BaseModal.vue'
 import { formatCurrency as formatCurrencyUtil } from '../utils/currency'
 import CostDetailModal from '../components/CostDetailModal.vue'
 
 export default {
   name: 'Spending',
   components: {
-    CostDetailModal
+    CostDetailModal,
+    LoadingState,
+    ErrorState,
+    BaseModal
   },
   setup() {
     const { t, currentCurrency } = useI18n()
@@ -210,6 +248,7 @@ export default {
     // Modal state
     const showCostModal = ref(false)
     const selectedCostData = ref(null)
+    const selectedTransaction = ref(null)
 
     // Use shared filters
     const { selectedPeriod, getCurrentFilters } = useFilters()
@@ -360,28 +399,32 @@ export default {
       return Math.ceil(max / 1000) // Return in K
     })
 
-    const loadData = async () => {
-      try {
-        loading.value = true
-        const [summaryRes, monthlyRes, categoryRes, transactionsRes, ordersRes] = await Promise.all([
-          api.getSpendingSummary(),
-          api.getMonthlySpending(),
-          api.getCategorySpending(),
-          api.getTransactions(),
-          api.getOrders()
-        ])
-
-        summaryData.value = summaryRes
-        allMonthlySpending.value = monthlyRes
-        allCategorySpending.value = categoryRes
-        allTransactions.value = transactionsRes
-        allOrders.value = ordersRes
-      } catch (err) {
-        error.value = 'Failed to load financial data: ' + err.message
-      } finally {
-        loading.value = false
+    // Latest-wins: Retry spam or a slow earlier response can never overwrite newer state
+    const { run: loadData } = useLatestRequest(
+      () => Promise.all([
+        api.getSpendingSummary(),
+        api.getMonthlySpending(),
+        api.getCategorySpending(),
+        api.getTransactions(),
+        api.getOrders()
+      ]),
+      {
+        loading,
+        error,
+        onData: ([summaryRes, monthlyRes, categoryRes, transactionsRes, ordersRes]) => {
+          summaryData.value = summaryRes
+          allMonthlySpending.value = monthlyRes
+          allCategorySpending.value = categoryRes
+          allTransactions.value = transactionsRes
+          allOrders.value = ordersRes
+        },
+        onError: (err) => {
+          // Headline is localized in the template; the raw message is secondary detail only
+          console.error(err)
+          error.value = err?.message || 'Error'
+        }
       }
-    }
+    )
 
     const formatCurrency = (value) => {
       return formatCurrencyUtil(value, currentCurrency.value)
@@ -456,7 +499,7 @@ export default {
     }
 
     const handleTransactionClick = (transaction) => {
-      alert(`Transaction Details:\n\nID: ${transaction.id}\nDescription: ${transaction.description}\nVendor: ${transaction.vendor}\nDate: ${formatDateShort(transaction.date)}\nAmount: $${transaction.amount.toLocaleString()}`)
+      selectedTransaction.value = transaction
     }
 
     const showCostDetail = (monthData) => {
@@ -489,6 +532,8 @@ export default {
       translateMonth,
       translateCategory,
       handleTransactionClick,
+      selectedTransaction,
+      loadData,
       showCostModal,
       selectedCostData,
       showCostDetail,
@@ -526,7 +571,8 @@ export default {
 
 .chart-legend {
   display: flex;
-  gap: 1.5rem;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
   font-size: 0.875rem;
 }
 
@@ -618,12 +664,15 @@ export default {
 
 .chart-container {
   padding: 1.5rem 0;
+  /* Charts with 12 bars scroll horizontally inside their own card on narrow screens instead of widening the page */
+  overflow-x: auto;
 }
 
 .bar-chart {
   display: flex;
   gap: 1.5rem;
   height: 350px;
+  min-width: 560px;
 }
 
 .y-axis {
@@ -632,7 +681,7 @@ export default {
   justify-content: space-between;
   padding-right: 1rem;
   font-size: 0.75rem;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   border-right: 1px solid #e2e8f0;
 }
 
@@ -707,7 +756,7 @@ export default {
 
 .two-column-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(450px, 100%), 1fr));
   gap: 1.75rem;
 }
 
@@ -861,5 +910,30 @@ export default {
 
 .text-right {
   text-align: right;
+}
+
+.transaction-detail {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.transaction-detail .detail-row {
+  display: grid;
+  grid-template-columns: minmax(90px, 30%) minmax(0, 1fr);
+  gap: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.transaction-detail dt {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.transaction-detail dd {
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
 }
 </style>

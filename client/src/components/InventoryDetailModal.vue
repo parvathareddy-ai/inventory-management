@@ -1,7 +1,7 @@
 <template>
   <BaseModal
     :is-open="isOpen && !!inventoryItem"
-    title="Inventory Item Details"
+    :title="t('modals.inventory.title')"
     @close="close"
   >
     <div class="item-header">
@@ -14,79 +14,79 @@
       </div>
       <div class="item-title-section">
         <h4 class="item-name">{{ translateProductName(inventoryItem.name) }}</h4>
-        <div class="item-sku">SKU: {{ inventoryItem.sku }}</div>
+        <div class="item-sku">{{ t('modals.sku') }}: {{ inventoryItem.sku }}</div>
       </div>
       <span class="stock-badge" :class="getStockStatusClass()">
-        {{ getStockStatus() }}
+        {{ getStockLabel() }}
       </span>
     </div>
 
     <div class="stock-summary">
       <div class="summary-card primary">
-        <div class="summary-label">Quantity on Hand</div>
-        <div class="summary-value">{{ inventoryItem.quantity_on_hand }} units</div>
+        <div class="summary-label">{{ t('modals.inventory.quantityOnHand') }}</div>
+        <div class="summary-value">{{ t('modals.unitsCount', { count: inventoryItem.quantity_on_hand }) }}</div>
       </div>
       <div class="summary-card" :class="getSummaryCardClass()">
-        <div class="summary-label">Stock Level</div>
+        <div class="summary-label">{{ t('modals.inventory.stockLevel') }}</div>
         <div class="summary-value">{{ stockPercentage }}%</div>
-        <div class="summary-subtitle">vs. reorder point</div>
+        <div class="summary-subtitle">{{ t('modals.inventory.vsReorderPoint') }}</div>
       </div>
     </div>
 
     <div class="info-grid">
       <div class="info-item">
-        <div class="info-label">Category</div>
+        <div class="info-label">{{ t('modals.inventory.category') }}</div>
         <div class="info-value">{{ inventoryItem.category }}</div>
       </div>
 
       <div class="info-item">
-        <div class="info-label">Location</div>
+        <div class="info-label">{{ t('modals.inventory.location') }}</div>
         <div class="info-value">{{ inventoryItem.location }}</div>
       </div>
 
       <div class="info-item">
-        <div class="info-label">Reorder Point</div>
-        <div class="info-value">{{ inventoryItem.reorder_point }} units</div>
+        <div class="info-label">{{ t('modals.inventory.reorderPoint') }}</div>
+        <div class="info-value">{{ t('modals.unitsCount', { count: inventoryItem.reorder_point }) }}</div>
       </div>
 
       <div class="info-item">
-        <div class="info-label">Units Remaining</div>
+        <div class="info-label">{{ t('modals.inventory.unitsRemaining') }}</div>
         <div class="info-value">
           <span :style="{ color: inventoryItem.quantity_on_hand <= inventoryItem.reorder_point ? '#ef4444' : '#10b981' }">
-            {{ inventoryItem.quantity_on_hand - inventoryItem.reorder_point }} units
+            {{ t('modals.unitsCount', { count: inventoryItem.quantity_on_hand - inventoryItem.reorder_point }) }}
           </span>
         </div>
       </div>
 
       <div class="info-item">
-        <div class="info-label">Unit Cost</div>
+        <div class="info-label">{{ t('modals.inventory.unitCost') }}</div>
         <div class="info-value">{{ currencySymbol }}{{ inventoryItem.unit_cost.toFixed(2) }}</div>
       </div>
 
       <div class="info-item">
-        <div class="info-label">Total Value</div>
+        <div class="info-label">{{ t('modals.inventory.totalValue') }}</div>
         <div class="info-value total-value">
           {{ currencySymbol }}{{ totalValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) }}
         </div>
       </div>
 
       <div class="info-item">
-        <div class="info-label">Warehouse</div>
+        <div class="info-label">{{ t('modals.inventory.warehouse') }}</div>
         <div class="info-value">{{ translateWarehouse(inventoryItem.location) }}</div>
       </div>
 
       <div class="info-item">
-        <div class="info-label">Status</div>
+        <div class="info-label">{{ t('modals.inventory.status') }}</div>
         <div class="info-value">
           <span :class="['badge', getStockStatusClass()]">
-            {{ getStockStatus() }}
+            {{ getStockLabel() }}
           </span>
         </div>
       </div>
     </div>
 
     <template #footer>
-      <button class="btn-secondary" @click="close">Close</button>
+      <button class="btn-secondary" @click="close">{{ t('common.close') }}</button>
     </template>
   </BaseModal>
 </template>
@@ -96,7 +96,7 @@ import BaseModal from './BaseModal.vue'
 import { computed } from 'vue'
 import { useI18n } from '../composables/useI18n'
 
-const { currentCurrency, translateProductName, translateWarehouse } = useI18n()
+const { t, currentCurrency, translateProductName, translateWarehouse } = useI18n()
 
 const currencySymbol = computed(() => {
   return currentCurrency.value === 'JPY' ? '¥' : '$'
@@ -138,6 +138,13 @@ const getStockStatus = () => {
   } else {
     return 'In Stock'
   }
+}
+
+// getStockStatus() returns English tokens that drive the CSS-class helpers below; only the displayed label is translated
+const getStockLabel = () => {
+  const keys = { 'Low Stock': 'lowStock', 'Adequate': 'adequate', 'In Stock': 'inStock' }
+  const key = keys[getStockStatus()]
+  return key ? t(`status.${key}`) : getStockStatus()
 }
 
 const getStockStatusClass = () => {

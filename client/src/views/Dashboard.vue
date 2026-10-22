@@ -4,8 +4,8 @@
       <h2>{{ t('dashboard.title') }}</h2>
     </div>
 
-    <div v-if="loading" class="loading">{{ t('common.loading') }}</div>
-    <div v-else-if="error" class="error">{{ error }}</div>
+    <LoadingState v-if="loading" />
+    <ErrorState v-else-if="error" :message="t('dashboard.loadError')" :detail="error" @retry="retryLoad" />
     <div v-else>
       <!-- Key Performance Indicators -->
       <div class="kpi-section">
@@ -180,7 +180,7 @@
                   <th>{{ t('dashboard.inventoryShortages.shortage') }}</th>
                   <th>{{ t('dashboard.inventoryShortages.daysDelayed') }}</th>
                   <th>{{ t('dashboard.inventoryShortages.priority') }}</th>
-                  <th>Actions</th>
+                  <th>{{ t('dashboard.inventoryShortages.actions') }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -315,6 +315,8 @@ import { api } from '../api'
 import { useLatestRequest } from '../composables/useLatestRequest'
 import { useFilters } from '../composables/useFilters'
 import { useI18n } from '../composables/useI18n'
+import LoadingState from '../components/LoadingState.vue'
+import ErrorState from '../components/ErrorState.vue'
 import { formatCurrency } from '../utils/currency'
 import ProductDetailModal from '../components/ProductDetailModal.vue'
 import BacklogDetailModal from '../components/BacklogDetailModal.vue'
@@ -323,6 +325,8 @@ import PurchaseOrderModal from '../components/PurchaseOrderModal.vue'
 export default {
   name: 'Dashboard',
   components: {
+    LoadingState,
+    ErrorState,
     ProductDetailModal,
     BacklogDetailModal,
     PurchaseOrderModal,
@@ -595,7 +599,9 @@ export default {
           allBacklogItems.value = backlogData
         },
         onError: (err) => {
-          error.value = 'Failed to load dashboard data: ' + err.message
+          // Keep the raw message as secondary detail only; the headline is localized in the template
+          console.error(err)
+          error.value = err?.message || 'Error'
         }
       }
     )
@@ -700,6 +706,8 @@ export default {
       t,
       loading,
       error,
+      // run() restarts the request and supersedes any in-flight one, so repeated clicks cannot race
+      retryLoad: loadData,
       summary,
       ordersData,
       fillRate,
@@ -829,9 +837,21 @@ export default {
 
 .charts-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  /* minmax(0, ...) lets tracks shrink below their content so wide charts cannot stretch the page */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1.25rem;
   margin-bottom: 1.5rem;
+}
+
+/* With the expanded sidebar, two columns are too tight below this width */
+@media (max-width: 1100px) {
+  .charts-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.chart-card {
+  min-width: 0;
 }
 
 .chart-card.full-width {
@@ -877,7 +897,7 @@ export default {
 /* Order Health Dashboard Styles */
 .order-health-container {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
   gap: 1.5rem;
   align-items: center;
   padding: 1rem;
@@ -1027,7 +1047,7 @@ export default {
   justify-content: space-between;
   padding-right: 1rem;
   font-size: 0.75rem;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   border-right: 1px solid #e2e8f0;
 }
 
@@ -1094,7 +1114,7 @@ export default {
 .no-data {
   padding: 2rem;
   text-align: center;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   font-size: 0.875rem;
 }
 
@@ -1159,7 +1179,6 @@ export default {
 }
 
 .task-input:focus {
-  outline: none;
   border-color: #667eea;
 }
 
@@ -1212,13 +1231,14 @@ export default {
   background: white;
 }
 
+/* No opacity fade: it would drop the muted completed-task text below 4.5:1 contrast; the strikethrough marks completion */
 .task-item.completed {
-  opacity: 0.6;
+  background: var(--color-bg);
 }
 
 .task-item.completed .task-text {
   text-decoration: line-through;
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }
 
 .task-checkbox {
@@ -1270,14 +1290,14 @@ export default {
 }
 
 .po-button.create {
-  background: #3b82f6;
+  background: #2563eb; /* white on #2563eb is ~5.2:1 (was #3b82f6, 3.68:1) */
   color: white;
 }
 
 .po-button.create:hover {
-  background: #2563eb;
+  background: #1d4ed8; /* ~6.7:1 */
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
 }
 
 .po-button.view {

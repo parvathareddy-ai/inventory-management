@@ -5,8 +5,8 @@
       <p>Track and resolve inventory shortages</p>
     </div>
 
-    <div v-if="loading" class="loading">Loading backlog...</div>
-    <div v-else-if="error" class="error">{{ error }}</div>
+    <LoadingState v-if="loading" />
+    <ErrorState v-else-if="error" :detail="error" @retry="loadBacklog" />
     <div v-else>
       <div class="stats-grid">
         <div class="stat-card danger">
@@ -86,9 +86,12 @@ import { ref, onMounted, watch, computed } from 'vue'
 import { api } from '../api'
 import { useLatestRequest } from '../composables/useLatestRequest'
 import { useFilters } from '../composables/useFilters'
+import LoadingState from '../components/LoadingState.vue'
+import ErrorState from '../components/ErrorState.vue'
 
 export default {
   name: 'Backlog',
+  components: { LoadingState, ErrorState },
   setup() {
     const loading = ref(true)
     const error = ref(null)
@@ -129,7 +132,8 @@ export default {
           inventoryItems.value = inventoryData
         },
         onError: (err) => {
-          error.value = 'Failed to load backlog: ' + err.message
+          console.error(err)
+          error.value = err?.message || 'Error'
         }
       }
     )
@@ -146,6 +150,7 @@ export default {
     return {
       loading,
       error,
+      loadBacklog,
       backlogItems,
       getBacklogByPriority
     }

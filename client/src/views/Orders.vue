@@ -5,8 +5,8 @@
       <p>{{ t('orders.description') }}</p>
     </div>
 
-    <div v-if="loading" class="loading">{{ t('common.loading') }}</div>
-    <div v-else-if="error" class="error">{{ error }}</div>
+    <LoadingState v-if="loading" />
+    <ErrorState v-else-if="error" :message="t('orders.loadError')" :detail="error" @retry="retryLoad" />
     <div v-else>
       <div class="stats-grid">
         <div class="stat-card success">
@@ -80,8 +80,13 @@
         <div class="card-header">
           <h3 class="card-title">{{ t('orders.submittedOrders') }} ({{ submittedOrders.length }})</h3>
         </div>
-        <div v-if="submittedError" class="error">{{ submittedError }}</div>
-        <div v-else-if="submittedLoading" class="loading">{{ t('common.loading') }}</div>
+        <ErrorState
+          v-if="submittedError"
+          :message="t('orders.submittedError')"
+          :detail="submittedError"
+          @retry="retrySubmitted"
+        />
+        <LoadingState v-else-if="submittedLoading" />
         <div v-else-if="submittedOrders.length === 0" class="empty-state">
           {{ t('orders.noSubmittedOrders') }}
         </div>
@@ -159,10 +164,13 @@ import { api } from '../api'
 import { useLatestRequest } from '../composables/useLatestRequest'
 import { useFilters } from '../composables/useFilters'
 import { useI18n } from '../composables/useI18n'
+import LoadingState from '../components/LoadingState.vue'
+import ErrorState from '../components/ErrorState.vue'
 import { formatCurrency as formatCurrencyUtil } from '../utils/currency'
 
 export default {
   name: 'Orders',
+  components: { LoadingState, ErrorState },
   setup() {
     const { t, currentCurrency, translateProductName, translateCustomerName } = useI18n()
 
@@ -197,7 +205,9 @@ export default {
           })
         },
         onError: (err) => {
-          error.value = 'Failed to load orders: ' + err.message
+          // Keep the raw message as secondary detail only; the headline is localized in the template
+          console.error(err)
+          error.value = err?.message || 'Error'
         }
       }
     )
@@ -240,13 +250,22 @@ export default {
     // Set of order ids whose per-item detail row is open
     const expandedIds = ref(new Set())
 
+    // Latest-wins guard: a stale or duplicate (Retry spam) response never overwrites a newer one
+    let submittedSeq = 0
     const loadSubmittedOrders = async () => {
+      const id = ++submittedSeq
+      submittedLoading.value = true
+      submittedError.value = null
       try {
-        submittedOrders.value = await api.getSubmittedOrders()
+        const data = await api.getSubmittedOrders()
+        if (id !== submittedSeq) return
+        submittedOrders.value = data
       } catch (err) {
-        submittedError.value = t('orders.submittedError') + ': ' + err.message
+        if (id !== submittedSeq) return
+        console.error(err)
+        submittedError.value = err?.message || 'Error'
       } finally {
-        submittedLoading.value = false
+        if (id === submittedSeq) submittedLoading.value = false
       }
     }
 
@@ -271,6 +290,8 @@ export default {
       t,
       loading,
       error,
+      // run() restarts the request and supersedes any in-flight one, so repeated clicks cannot race
+      retryLoad: loadOrders,
       orders,
       getOrdersByStatus,
       getOrderStatusClass,
@@ -279,6 +300,7 @@ export default {
       submittedOrders,
       submittedLoading,
       submittedError,
+      retrySubmitted: loadSubmittedOrders,
       isExpanded,
       toggleExpanded,
       currencySymbol,

@@ -1,6 +1,11 @@
 export default {
   // Navigation
   nav: {
+    operations: 'Operations',
+    financeInsights: 'Finance & Insights',
+    reports: 'Reports',
+    primary: 'Primary',
+    collapse: 'Collapse',
     overview: 'Overview',
     inventory: 'Inventory',
     orders: 'Orders',
@@ -13,6 +18,7 @@ export default {
 
   // Dashboard
   dashboard: {
+    loadError: 'Failed to load dashboard data',
     title: 'Overview',
     kpi: {
       title: 'Key Performance Indicators',
@@ -55,6 +61,7 @@ export default {
       shortage: 'Shortage',
       daysDelayed: 'Days Delayed',
       priority: 'Priority',
+      actions: 'Actions',
       unitsShort: 'units short',
       days: 'days'
     },
@@ -99,6 +106,7 @@ export default {
 
   // Inventory
   inventory: {
+    loadError: 'Failed to load inventory',
     title: 'Inventory',
     description: 'Track and manage all inventory items',
     stockLevels: 'Stock Levels',
@@ -130,6 +138,7 @@ export default {
 
   // Orders
   orders: {
+    loadError: 'Failed to load orders',
     title: 'Orders',
     description: 'View and manage customer orders',
     allOrders: 'All Orders',
@@ -205,6 +214,8 @@ export default {
 
   // Finance/Spending
   finance: {
+    loadError: 'Failed to load financial data',
+    transactionDetails: 'Transaction Details',
     title: 'Finance Dashboard',
     description: 'Track revenue, costs, and financial performance',
     totalRevenue: 'Total Revenue',
@@ -243,6 +254,7 @@ export default {
 
   // Demand Forecast
   demand: {
+    loadError: 'Failed to load demand forecasts',
     title: 'Demand Forecast',
     description: 'Analyze demand trends and forecasts',
     increasingDemand: 'Increasing Demand',
@@ -264,6 +276,7 @@ export default {
 
   // Filters
   filters: {
+    resetFilters: 'Reset all filters',
     timePeriod: 'Time Period',
     location: 'Location',
     category: 'Category',
@@ -352,7 +365,8 @@ export default {
   profile: {
     profileDetails: 'Profile Details',
     myTasks: 'My Tasks',
-    logout: 'Logout'
+    logout: 'Logout',
+    logoutNotice: 'Logout is not available in this demo; no session is active.'
   },
 
   // Profile Details Modal
@@ -385,9 +399,95 @@ export default {
     selectLanguage: 'Select Language'
   },
 
+  // Reports
+  reports: {
+    title: 'Performance Reports',
+    description: 'View quarterly performance metrics and monthly trends',
+    loadError: 'Failed to load reports',
+    quarterly: {
+      title: 'Quarterly Performance',
+      quarter: 'Quarter',
+      totalOrders: 'Total Orders',
+      totalRevenue: 'Total Revenue',
+      avgOrderValue: 'Avg Order Value',
+      fulfillmentRate: 'Fulfillment Rate'
+    },
+    trend: {
+      title: 'Monthly Revenue Trend',
+      barLabel: 'Revenue for {month}: {amount}'
+    },
+    monthOverMonth: {
+      title: 'Month-over-Month Analysis',
+      month: 'Month',
+      orders: 'Orders',
+      revenue: 'Revenue',
+      change: 'Change',
+      growthRate: 'Growth Rate'
+    },
+    stats: {
+      totalRevenueYtd: 'Total Revenue (YTD)',
+      avgMonthlyRevenue: 'Avg Monthly Revenue',
+      totalOrdersYtd: 'Total Orders (YTD)',
+      bestQuarter: 'Best Performing Quarter'
+    },
+    notAvailable: 'N/A'
+  },
+
+  // Detail modals
+  modals: {
+    sku: 'SKU',
+    unitsCount: '{count} units',
+    daysCount: '{count} days',
+    percentOfTotal: '{percent}% of total',
+    notAvailable: 'N/A',
+    cost: {
+      title: '{month} Cost Breakdown',
+      totalCosts: 'Total Costs'
+    },
+    backlog: {
+      title: 'Inventory Shortage Details',
+      priority: '{priority} Priority',
+      shortageAmount: 'Shortage Amount',
+      daysDelayed: 'Days Delayed',
+      orderId: 'Order ID',
+      itemSku: 'Item SKU',
+      quantityNeeded: 'Quantity Needed',
+      quantityAvailable: 'Quantity Available',
+      expectedDate: 'Expected Date',
+      status: 'Status'
+    },
+    product: {
+      title: 'Product Details',
+      category: 'Category',
+      warehouse: 'Warehouse',
+      unitsOrdered: 'Units Ordered',
+      totalRevenue: 'Total Revenue',
+      currentStock: 'Current Stock',
+      reorderPoint: 'Reorder Point',
+      firstOrderDate: 'First Order Date',
+      stockStatus: 'Stock Status'
+    },
+    inventory: {
+      title: 'Inventory Item Details',
+      quantityOnHand: 'Quantity on Hand',
+      stockLevel: 'Stock Level',
+      vsReorderPoint: 'vs. reorder point',
+      category: 'Category',
+      location: 'Location',
+      reorderPoint: 'Reorder Point',
+      unitsRemaining: 'Units Remaining',
+      unitCost: 'Unit Cost',
+      totalValue: 'Total Value',
+      warehouse: 'Warehouse',
+      status: 'Status'
+    }
+  },
+
   // Common
   common: {
     loading: 'Loading...',
+    loadError: 'Something went wrong while loading this page.',
+    retry: 'Retry',
     error: 'Error',
     noData: 'No data available',
     viewDetails: 'View Details',

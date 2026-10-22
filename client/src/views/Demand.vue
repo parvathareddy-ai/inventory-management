@@ -5,8 +5,8 @@
       <p>{{ t('demand.description') }}</p>
     </div>
 
-    <div v-if="loading" class="loading">{{ t('common.loading') }}</div>
-    <div v-else-if="error" class="error">{{ error }}</div>
+    <LoadingState v-if="loading" />
+    <ErrorState v-else-if="error" :message="t('demand.loadError')" :detail="error" @retry="retryLoad" />
     <div v-else>
       <div class="demand-trend-cards">
         <div class="trend-card increasing-card">
@@ -116,9 +116,12 @@ import { api } from '../api'
 import { useLatestRequest } from '../composables/useLatestRequest'
 import { useFilters } from '../composables/useFilters'
 import { useI18n } from '../composables/useI18n'
+import LoadingState from '../components/LoadingState.vue'
+import ErrorState from '../components/ErrorState.vue'
 
 export default {
   name: 'Demand',
+  components: { LoadingState, ErrorState },
   setup() {
     const { t } = useI18n()
     const loading = ref(true)
@@ -160,7 +163,9 @@ export default {
           inventoryItems.value = inventoryData
         },
         onError: (err) => {
-          error.value = 'Failed to load demand forecasts: ' + err.message
+          // Keep the raw message as secondary detail only; the headline is localized in the template
+          console.error(err)
+          error.value = err?.message || 'Error'
         }
       }
     )
@@ -215,6 +220,8 @@ export default {
       t,
       loading,
       error,
+      // run() restarts the request and supersedes any in-flight one, so repeated clicks cannot race
+      retryLoad: loadForecasts,
       forecasts,
       getForecastsByTrend,
       getChangePercent,

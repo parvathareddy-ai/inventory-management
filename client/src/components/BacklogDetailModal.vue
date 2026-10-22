@@ -1,7 +1,7 @@
 <template>
   <BaseModal
     :is-open="isOpen && !!backlogItem"
-    title="Inventory Shortage Details"
+    :title="t('modals.backlog.title')"
     @close="close"
   >
     <div class="shortage-header">
@@ -13,60 +13,60 @@
       </div>
       <div class="shortage-title-section">
         <h4 class="item-name">{{ translateProductName(backlogItem.item_name) }}</h4>
-        <div class="item-sku">SKU: {{ backlogItem.item_sku }}</div>
+        <div class="item-sku">{{ t('modals.sku') }}: {{ backlogItem.item_sku }}</div>
       </div>
       <span class="priority-badge" :class="backlogItem.priority">
-        {{ backlogItem.priority }} Priority
+        {{ t('modals.backlog.priority', { priority: t(`priority.${backlogItem.priority}`) }) }}
       </span>
     </div>
 
     <div class="shortage-summary">
       <div class="summary-card danger">
-        <div class="summary-label">Shortage Amount</div>
-        <div class="summary-value">{{ shortage }} units</div>
+        <div class="summary-label">{{ t('modals.backlog.shortageAmount') }}</div>
+        <div class="summary-value">{{ t('modals.unitsCount', { count: shortage }) }}</div>
       </div>
       <div class="summary-card warning">
-        <div class="summary-label">Days Delayed</div>
-        <div class="summary-value">{{ backlogItem.days_delayed }} days</div>
+        <div class="summary-label">{{ t('modals.backlog.daysDelayed') }}</div>
+        <div class="summary-value">{{ t('modals.daysCount', { count: backlogItem.days_delayed }) }}</div>
       </div>
     </div>
 
     <div class="info-grid">
       <div class="info-item">
-        <div class="info-label">Order ID</div>
+        <div class="info-label">{{ t('modals.backlog.orderId') }}</div>
         <div class="info-value order-id">{{ backlogItem.order_id }}</div>
       </div>
 
       <div class="info-item">
-        <div class="info-label">Item SKU</div>
+        <div class="info-label">{{ t('modals.backlog.itemSku') }}</div>
         <div class="info-value sku">{{ backlogItem.item_sku }}</div>
       </div>
 
       <div class="info-item">
-        <div class="info-label">Quantity Needed</div>
-        <div class="info-value">{{ backlogItem.quantity_needed }} units</div>
+        <div class="info-label">{{ t('modals.backlog.quantityNeeded') }}</div>
+        <div class="info-value">{{ t('modals.unitsCount', { count: backlogItem.quantity_needed }) }}</div>
       </div>
 
       <div class="info-item">
-        <div class="info-label">Quantity Available</div>
-        <div class="info-value">{{ backlogItem.quantity_available }} units</div>
+        <div class="info-label">{{ t('modals.backlog.quantityAvailable') }}</div>
+        <div class="info-value">{{ t('modals.unitsCount', { count: backlogItem.quantity_available }) }}</div>
       </div>
 
       <div class="info-item">
-        <div class="info-label">Expected Date</div>
+        <div class="info-label">{{ t('modals.backlog.expectedDate') }}</div>
         <div class="info-value">{{ formatDate(backlogItem.expected_date) }}</div>
       </div>
 
       <div class="info-item">
-        <div class="info-label">Status</div>
+        <div class="info-label">{{ t('modals.backlog.status') }}</div>
         <div class="info-value">
-          <span class="badge danger">Backordered</span>
+          <span class="badge danger">{{ t('status.backordered') }}</span>
         </div>
       </div>
     </div>
 
     <template #footer>
-      <button class="btn-secondary" @click="close">Close</button>
+      <button class="btn-secondary" @click="close">{{ t('common.close') }}</button>
     </template>
   </BaseModal>
 </template>
@@ -76,7 +76,7 @@ import BaseModal from './BaseModal.vue'
 import { computed } from 'vue'
 import { useI18n } from '../composables/useI18n'
 
-const { translateProductName } = useI18n()
+const { t, currentLocale, translateProductName } = useI18n()
 
 const props = defineProps({
   isOpen: {
@@ -101,9 +101,11 @@ const close = () => {
 }
 
 const formatDate = (dateString) => {
-  if (!dateString) return 'N/A'
+  if (!dateString) return t('modals.notAvailable')
   const date = new Date(dateString)
-  return date.toLocaleDateString('en-US', {
+  // Invalid dates are shown as-is rather than "Invalid Date"
+  if (isNaN(date.getTime())) return dateString
+  return date.toLocaleDateString(currentLocale.value === 'ja' ? 'ja-JP' : 'en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric'

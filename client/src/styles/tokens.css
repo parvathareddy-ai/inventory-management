@@ -11,7 +11,7 @@
   --color-border-strong: #cbd5e1;
   --color-text: #0f172a;
   --color-text-muted: #64748b;
-  --color-text-subtle: #94a3b8;
+  --color-text-subtle: #64748b; /* >= 4.5:1 on white (was #94a3b8, 2.6:1); sidebar keeps its own lighter value */
 
   /* Accent: active nav, primary buttons, links */
   --color-accent: #2563eb;
@@ -31,6 +31,7 @@
   /* Sidebar (dark rail; swap to light values for a light sidebar) */
   --sidebar-bg: #0f172a;
   --sidebar-text: #cbd5e1;
+  --sidebar-text-subtle: #94a3b8; /* ~6.9:1 on the dark sidebar */
   --sidebar-text-active: #ffffff;
   --sidebar-item-hover: rgba(255, 255, 255, 0.06);
   --sidebar-item-active: rgba(255, 255, 255, 0.1);

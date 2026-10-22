@@ -88,12 +88,19 @@ const createCurrentUser = () => {
 
 const currentUser = createCurrentUser()
 
+// Mock app: there is no session to clear, so logout only raises a transient, non-blocking notice
+// (rendered by App.vue) instead of a blocking alert(). Module-level so every useAuth() shares it.
+const logoutNoticeVisible = ref(false)
+let logoutNoticeTimer = null
+
 export function useAuth() {
   const isAuthenticated = ref(true)
 
   const logout = () => {
-    // In a real app, this would clear tokens, etc.
-    alert('Logout functionality - in a real app, this would clear session and redirect to login')
+    // In a real app, this would clear tokens and redirect to login
+    logoutNoticeVisible.value = true
+    clearTimeout(logoutNoticeTimer)
+    logoutNoticeTimer = setTimeout(() => { logoutNoticeVisible.value = false }, 5000)
   }
 
   const getInitials = (name) => {
@@ -108,6 +115,7 @@ export function useAuth() {
     currentUser,
     isAuthenticated,
     logout,
+    logoutNoticeVisible,
     getInitials
   }
 }

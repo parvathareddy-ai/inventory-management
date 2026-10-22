@@ -277,7 +277,6 @@ const submit = async () => {
 
 .form-field input:focus,
 .form-field textarea:focus {
-  outline: none;
   border-color: var(--color-accent, #2563eb);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }

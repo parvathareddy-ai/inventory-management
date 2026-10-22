@@ -1,6 +1,11 @@
 export default {
   // Navigation
   nav: {
+    operations: '業務',
+    financeInsights: '財務・分析',
+    reports: 'レポート',
+    primary: 'メインナビゲーション',
+    collapse: '折りたたむ',
     overview: '概要',
     inventory: '在庫',
     orders: '注文',
@@ -13,6 +18,7 @@ export default {
 
   // Dashboard
   dashboard: {
+    loadError: 'ダッシュボードデータの読み込みに失敗しました',
     title: '概要',
     kpi: {
       title: '主要業績評価指標',
@@ -55,6 +61,7 @@ export default {
       shortage: '不足',
       daysDelayed: '遅延日数',
       priority: '優先度',
+      actions: '操作',
       unitsShort: '単位不足',
       days: '日'
     },
@@ -99,6 +106,7 @@ export default {
 
   // Inventory
   inventory: {
+    loadError: '在庫の読み込みに失敗しました',
     title: '在庫',
     description: 'すべての在庫品目の追跡と管理',
     stockLevels: '在庫レベル',
@@ -130,6 +138,7 @@ export default {
 
   // Orders
   orders: {
+    loadError: '注文の読み込みに失敗しました',
     title: '注文',
     description: '顧客注文の表示と管理',
     allOrders: 'すべての注文',
@@ -205,6 +214,8 @@ export default {
 
   // Finance/Spending
   finance: {
+    loadError: '財務データの読み込みに失敗しました',
+    transactionDetails: '取引の詳細',
     title: '財務ダッシュボード',
     description: '収益、コスト、財務パフォーマンスの追跡',
     totalRevenue: '総収益',
@@ -243,6 +254,7 @@ export default {
 
   // Demand Forecast
   demand: {
+    loadError: '需要予測の読み込みに失敗しました',
     title: '需要予測',
     description: '需要動向の分析と将来のニーズの予測',
     increasingDemand: '需要増加',
@@ -264,6 +276,7 @@ export default {
 
   // Filters
   filters: {
+    resetFilters: 'すべてのフィルターをリセット',
     timePeriod: '期間',
     location: '場所',
     category: 'カテゴリ',
@@ -352,7 +365,8 @@ export default {
   profile: {
     profileDetails: 'プロフィール詳細',
     myTasks: 'マイタスク',
-    logout: 'ログアウト'
+    logout: 'ログアウト',
+    logoutNotice: 'このデモではログアウトは利用できません。アクティブなセッションはありません。'
   },
 
   // Profile Details Modal
@@ -385,9 +399,95 @@ export default {
     selectLanguage: '言語を選択'
   },
 
+  // レポート
+  reports: {
+    title: 'パフォーマンスレポート',
+    description: '四半期ごとの業績指標と月次トレンドを確認します',
+    loadError: 'レポートの読み込みに失敗しました',
+    quarterly: {
+      title: '四半期パフォーマンス',
+      quarter: '四半期',
+      totalOrders: '総注文数',
+      totalRevenue: '総売上',
+      avgOrderValue: '平均注文額',
+      fulfillmentRate: '出荷達成率'
+    },
+    trend: {
+      title: '月次売上推移',
+      barLabel: '{month}の売上: {amount}'
+    },
+    monthOverMonth: {
+      title: '前月比分析',
+      month: '月',
+      orders: '注文数',
+      revenue: '売上',
+      change: '増減',
+      growthRate: '成長率'
+    },
+    stats: {
+      totalRevenueYtd: '総売上（年初来）',
+      avgMonthlyRevenue: '月平均売上',
+      totalOrdersYtd: '総注文数（年初来）',
+      bestQuarter: '最高業績の四半期'
+    },
+    notAvailable: '該当なし'
+  },
+
+  // 詳細モーダル
+  modals: {
+    sku: 'SKU',
+    unitsCount: '{count}個',
+    daysCount: '{count}日',
+    percentOfTotal: '全体の{percent}%',
+    notAvailable: '該当なし',
+    cost: {
+      title: '{month}のコスト内訳',
+      totalCosts: '総コスト'
+    },
+    backlog: {
+      title: '在庫不足の詳細',
+      priority: '優先度: {priority}',
+      shortageAmount: '不足数量',
+      daysDelayed: '遅延日数',
+      orderId: '注文ID',
+      itemSku: '品目SKU',
+      quantityNeeded: '必要数量',
+      quantityAvailable: '利用可能数量',
+      expectedDate: '納品予定日',
+      status: 'ステータス'
+    },
+    product: {
+      title: '製品の詳細',
+      category: 'カテゴリ',
+      warehouse: '倉庫',
+      unitsOrdered: '注文数量',
+      totalRevenue: '総売上',
+      currentStock: '現在の在庫',
+      reorderPoint: '再注文点',
+      firstOrderDate: '初回注文日',
+      stockStatus: '在庫状況'
+    },
+    inventory: {
+      title: '在庫品目の詳細',
+      quantityOnHand: '手持ち数量',
+      stockLevel: '在庫レベル',
+      vsReorderPoint: '再注文点との比較',
+      category: 'カテゴリ',
+      location: '場所',
+      reorderPoint: '再注文点',
+      unitsRemaining: '残り数量',
+      unitCost: '単価（原価）',
+      totalValue: '合計金額',
+      warehouse: '倉庫',
+      status: 'ステータス'
+    }
+  },
+
   // Common
   common: {
     loading: '読み込み中...',
+    loadError: 'このページの読み込み中に問題が発生しました。',
+    retry: '再試行',
     error: 'エラー',
     noData: 'データがありません',
     viewDetails: '詳細を見る',
