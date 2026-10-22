@@ -184,26 +184,34 @@
                 </tr>
               </thead>
               <tbody>
+                <!-- Whole row opens the detail; .self keeps Enter/Space on the PO button from also firing it -->
                 <tr
                   v-for="item in backlogItems"
                   :key="item.id"
+                  class="clickable-row"
+                  tabindex="0"
+                  role="button"
+                  :aria-label="t('common.viewDetailsFor', { name: `${item.order_id} ${translateProductName(item.item_name)}` })"
+                  @click="showBacklogDetail(item)"
+                  @keydown.enter.self.prevent="showBacklogDetail(item)"
+                  @keydown.space.self.prevent="showBacklogDetail(item)"
                 >
-                  <td @click="showBacklogDetail(item)" style="cursor: pointer;"><strong>{{ item.order_id }}</strong></td>
-                  <td @click="showBacklogDetail(item)" style="cursor: pointer;"><strong>{{ item.item_sku }}</strong></td>
-                  <td @click="showBacklogDetail(item)" style="cursor: pointer;">{{ translateProductName(item.item_name) }}</td>
-                  <td @click="showBacklogDetail(item)" style="cursor: pointer;">{{ item.quantity_needed }}</td>
-                  <td @click="showBacklogDetail(item)" style="cursor: pointer;">{{ item.quantity_available }}</td>
-                  <td @click="showBacklogDetail(item)" style="cursor: pointer;">
+                  <td><strong>{{ item.order_id }}</strong></td>
+                  <td><strong>{{ item.item_sku }}</strong></td>
+                  <td>{{ translateProductName(item.item_name) }}</td>
+                  <td>{{ item.quantity_needed }}</td>
+                  <td>{{ item.quantity_available }}</td>
+                  <td>
                     <span class="badge danger">
                       {{ Math.abs(item.quantity_needed - item.quantity_available) }} {{ t('dashboard.inventoryShortages.unitsShort') }}
                     </span>
                   </td>
-                  <td @click="showBacklogDetail(item)" style="cursor: pointer;">
+                  <td>
                     <span :style="{ color: item.days_delayed > 7 ? '#ef4444' : '#f59e0b', fontWeight: 600 }">
                       {{ item.days_delayed }} {{ t('dashboard.inventoryShortages.days') }}
                     </span>
                   </td>
-                  <td @click="showBacklogDetail(item)" style="cursor: pointer;">
+                  <td>
                     <span :class="['badge', item.priority]">
                       {{ translatePriority(item.priority) }}
                     </span>
@@ -253,7 +261,12 @@
                   v-for="item in topProducts"
                   :key="item.sku"
                   class="clickable-row"
+                  tabindex="0"
+                  role="button"
+                  :aria-label="t('common.viewDetailsFor', { name: translateProductName(item.name) })"
                   @click="showProductDetail(item)"
+                  @keydown.enter.self.prevent="showProductDetail(item)"
+                  @keydown.space.self.prevent="showProductDetail(item)"
                 >
                   <td><strong>{{ translateProductName(item.name) }}</strong></td>
                   <td>{{ item.sku }}</td>
@@ -299,6 +312,7 @@
 <script>
 import { ref, onMounted, computed, watch } from 'vue'
 import { api } from '../api'
+import { useLatestRequest } from '../composables/useLatestRequest'
 import { useFilters } from '../composables/useFilters'
 import { useI18n } from '../composables/useI18n'
 import { formatCurrency } from '../utils/currency'
@@ -560,28 +574,31 @@ export default {
       return allBacklogItems.value.filter(b => validSkus.has(b.item_sku))
     })
 
-    const loadData = async () => {
-      try {
-        loading.value = true
+    // Only the newest request may apply data / loading / error; filter changes are debounced
+    const { run: loadData, trigger: scheduleLoad } = useLatestRequest(
+      () => {
         const filters = getCurrentFilters()
-
-        const [summaryData, ordersData, inventoryData, backlogData] = await Promise.all([
+        return Promise.all([
           api.getDashboardSummary(filters),
           api.getOrders(filters),
           api.getInventory(filters),
           api.getBacklog()
         ])
-
-        summary.value = summaryData
-        allOrders.value = ordersData
-        inventoryItems.value = inventoryData
-        allBacklogItems.value = backlogData
-      } catch (err) {
-        error.value = 'Failed to load dashboard data: ' + err.message
-      } finally {
-        loading.value = false
+      },
+      {
+        loading,
+        error,
+        onData: ([summaryData, ordersData, inventoryData, backlogData]) => {
+          summary.value = summaryData
+          allOrders.value = ordersData
+          inventoryItems.value = inventoryData
+          allBacklogItems.value = backlogData
+        },
+        onError: (err) => {
+          error.value = 'Failed to load dashboard data: ' + err.message
+        }
       }
-    }
+    )
 
     const calculatePercentage = (value, goal) => {
       return ((value / goal) * 100).toFixed(2)
@@ -675,9 +692,7 @@ export default {
     }
 
     // Watch for filter changes and reload data
-    watch([selectedPeriod, selectedLocation, selectedCategory, selectedStatus], () => {
-      loadData()
-    })
+    watch([selectedPeriod, selectedLocation, selectedCategory, selectedStatus], scheduleLoad)
 
     onMounted(loadData)
 
@@ -1112,6 +1127,11 @@ export default {
 
 .clickable-row:hover {
   background: #eff6ff !important;
+}
+
+.clickable-row:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 /* Tasks Card Styles */

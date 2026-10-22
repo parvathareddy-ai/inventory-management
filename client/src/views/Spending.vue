@@ -89,7 +89,15 @@
             </div>
             <div class="chart-area">
               <div v-for="month in monthlySpending" :key="month.month" class="bar-group">
-                <div class="stacked-bar" @click="showCostDetail(month)">
+                <div
+                  class="stacked-bar"
+                  tabindex="0"
+                  role="button"
+                  :aria-label="t('common.viewDetailsFor', { name: translateMonth(month.month) })"
+                  @click="showCostDetail(month)"
+                  @keydown.enter.self.prevent="showCostDetail(month)"
+                  @keydown.space.self.prevent="showCostDetail(month)"
+                >
                   <div class="bar-segment procurement" :style="{ height: getBarHeight(month.procurement) + '%' }" :title="`Procurement: ${currencySymbol}${month.procurement.toLocaleString()}`"></div>
                   <div class="bar-segment operational" :style="{ height: getBarHeight(month.operational) + '%' }" :title="`Operational: ${currencySymbol}${month.operational.toLocaleString()}`"></div>
                   <div class="bar-segment labor" :style="{ height: getBarHeight(month.labor) + '%' }" :title="`Labor: ${currencySymbol}${month.labor.toLocaleString()}`"></div>
@@ -148,7 +156,12 @@
                   v-for="transaction in recentTransactions"
                   :key="transaction.id"
                   class="clickable-row"
+                  tabindex="0"
+                  role="button"
+                  :aria-label="t('common.viewDetailsFor', { name: transaction.description })"
                   @click="handleTransactionClick(transaction)"
+                  @keydown.enter.self.prevent="handleTransactionClick(transaction)"
+                  @keydown.space.self.prevent="handleTransactionClick(transaction)"
                 >
                   <td class="transaction-id">{{ transaction.id.toString().padStart(3, '0') }}</td>
                   <td class="transaction-description">{{ transaction.description }}</td>
@@ -172,7 +185,7 @@
 </template>
 
 <script>
-import { ref, onMounted, watch, computed } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { api } from '../api'
 import { useFilters } from '../composables/useFilters'
 import { useI18n } from '../composables/useI18n'
@@ -370,11 +383,6 @@ export default {
       }
     }
 
-    // Watch for period filter changes
-    watch([selectedPeriod], () => {
-      // Data will automatically update via computed properties
-    })
-
     const formatCurrency = (value) => {
       return formatCurrencyUtil(value, currentCurrency.value)
     }
@@ -448,7 +456,6 @@ export default {
     }
 
     const handleTransactionClick = (transaction) => {
-      console.log('Transaction clicked:', transaction)
       alert(`Transaction Details:\n\nID: ${transaction.id}\nDescription: ${transaction.description}\nVendor: ${transaction.vendor}\nDate: ${formatDateShort(transaction.date)}\nAmount: $${transaction.amount.toLocaleString()}`)
     }
 
@@ -655,6 +662,12 @@ export default {
   padding-bottom: 2rem;
   cursor: pointer;
   transition: opacity 0.2s ease;
+}
+
+.stacked-bar:focus-visible,
+.transactions-table tbody tr.clickable-row:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 .stacked-bar:hover {

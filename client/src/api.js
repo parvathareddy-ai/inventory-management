@@ -123,10 +123,4 @@ export const api = {
     const response = await axios.get(`${API_BASE_URL}/purchase-orders/${backlogItemId}`)
     return response.data
   },
-
-  async getOpenTasks() {
-    const response = await axios.get(`${API_BASE_URL}/tasks`)
-
-    return response.data.filter((task) => task.status === 'pending')
-  },
 }

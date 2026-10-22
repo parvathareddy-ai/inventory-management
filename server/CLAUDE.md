@@ -155,8 +155,10 @@ def get_item(item_id: str):
 ### CORS Configuration
 
 **Development:**
-- Allow all origins during development (`allow_origins=["*"]`)
-- Useful for frontend dev server on different port
+- Only the Vite dev server origins are allowed (`http://localhost:3000`, `http://127.0.0.1:3000`)
+- Do not switch back to `allow_origins=["*"]`: the write endpoints have no auth, so a wildcard lets any
+  website the developer visits create, toggle or delete data on the local API
+- The server binds to `127.0.0.1` for the same reason; put an authenticating proxy in front to expose it
 
 **Production:**
 - Restrict to specific origins only
@@ -272,9 +274,9 @@ server/
 
 **Current State:**
 - No authentication (demo only)
-- CORS allows all origins
+- CORS limited to the local dev server; server bound to 127.0.0.1
 - No rate limiting
-- No input validation beyond types
+- Request bodies capped at 64 KB; string lengths, quantities and the task list are bounded
 - Suitable for local development only
 
 ## Quick Reference

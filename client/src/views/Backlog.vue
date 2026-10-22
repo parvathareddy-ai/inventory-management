@@ -84,6 +84,7 @@
 <script>
 import { ref, onMounted, watch, computed } from 'vue'
 import { api } from '../api'
+import { useLatestRequest } from '../composables/useLatestRequest'
 import { useFilters } from '../composables/useFilters'
 
 export default {
@@ -108,36 +109,37 @@ export default {
       return allBacklogItems.value.filter(b => validSkus.has(b.item_sku))
     })
 
-    const loadBacklog = async () => {
-      try {
-        loading.value = true
+    // Only the newest request may apply data / loading / error; filter changes are debounced
+    const { run: loadBacklog, trigger: scheduleLoad } = useLatestRequest(
+      () => {
         const filters = getCurrentFilters()
-
-        const [backlogData, inventoryData] = await Promise.all([
+        return Promise.all([
           api.getBacklog(),
           api.getInventory({
             warehouse: filters.warehouse,
             category: filters.category
           })
         ])
-
-        allBacklogItems.value = backlogData
-        inventoryItems.value = inventoryData
-      } catch (err) {
-        error.value = 'Failed to load backlog: ' + err.message
-      } finally {
-        loading.value = false
+      },
+      {
+        loading,
+        error,
+        onData: ([backlogData, inventoryData]) => {
+          allBacklogItems.value = backlogData
+          inventoryItems.value = inventoryData
+        },
+        onError: (err) => {
+          error.value = 'Failed to load backlog: ' + err.message
+        }
       }
-    }
+    )
 
     const getBacklogByPriority = (priority) => {
       return backlogItems.value.filter(item => item.priority === priority)
     }
 
     // Watch for filter changes and reload data
-    watch([selectedLocation, selectedCategory], () => {
-      loadBacklog()
-    })
+    watch([selectedLocation, selectedCategory], scheduleLoad)
 
     onMounted(loadBacklog)
 

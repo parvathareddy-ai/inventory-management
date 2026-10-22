@@ -156,6 +156,7 @@
 <script>
 import { ref, onMounted, watch, computed } from 'vue'
 import { api } from '../api'
+import { useLatestRequest } from '../composables/useLatestRequest'
 import { useFilters } from '../composables/useFilters'
 import { useI18n } from '../composables/useI18n'
 import { formatCurrency as formatCurrencyUtil } from '../utils/currency'
@@ -181,29 +182,28 @@ export default {
       getCurrentFilters
     } = useFilters()
 
-    const loadOrders = async () => {
-      try {
-        loading.value = true
-        const filters = getCurrentFilters()
-        const fetchedOrders = await api.getOrders(filters)
-
-        // Sort orders by order_date (earliest first)
-        orders.value = fetchedOrders.sort((a, b) => {
-          const dateA = new Date(a.order_date)
-          const dateB = new Date(b.order_date)
-          return dateA - dateB
-        })
-      } catch (err) {
-        error.value = 'Failed to load orders: ' + err.message
-      } finally {
-        loading.value = false
+    // Only the newest request may apply data / loading / error; filter changes are debounced
+    const { run: loadOrders, trigger: scheduleLoad } = useLatestRequest(
+      () => api.getOrders(getCurrentFilters()),
+      {
+        loading,
+        error,
+        onData: (fetchedOrders) => {
+          // Sort orders by order_date (earliest first)
+          orders.value = fetchedOrders.sort((a, b) => {
+            const dateA = new Date(a.order_date)
+            const dateB = new Date(b.order_date)
+            return dateA - dateB
+          })
+        },
+        onError: (err) => {
+          error.value = 'Failed to load orders: ' + err.message
+        }
       }
-    }
+    )
 
     // Watch for filter changes and reload data
-    watch([selectedPeriod, selectedLocation, selectedCategory, selectedStatus], () => {
-      loadOrders()
-    })
+    watch([selectedPeriod, selectedLocation, selectedCategory, selectedStatus], scheduleLoad)
 
     const getOrdersByStatus = (status) => {
       return orders.value.filter(order => order.status === status)

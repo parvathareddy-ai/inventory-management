@@ -113,6 +113,7 @@
 <script>
 import { ref, onMounted, watch, computed } from 'vue'
 import { api } from '../api'
+import { useLatestRequest } from '../composables/useLatestRequest'
 import { useFilters } from '../composables/useFilters'
 import { useI18n } from '../composables/useI18n'
 
@@ -139,32 +140,33 @@ export default {
       return allForecasts.value.filter(f => validSkus.has(f.item_sku))
     })
 
-    const loadForecasts = async () => {
-      try {
-        loading.value = true
+    // Only the newest request may apply data / loading / error; filter changes are debounced
+    const { run: loadForecasts, trigger: scheduleLoad } = useLatestRequest(
+      () => {
         const filters = getCurrentFilters()
-
-        const [forecastsData, inventoryData] = await Promise.all([
+        return Promise.all([
           api.getDemandForecasts(),
           api.getInventory({
             warehouse: filters.warehouse,
             category: filters.category
           })
         ])
-
-        allForecasts.value = forecastsData
-        inventoryItems.value = inventoryData
-      } catch (err) {
-        error.value = 'Failed to load demand forecasts: ' + err.message
-      } finally {
-        loading.value = false
+      },
+      {
+        loading,
+        error,
+        onData: ([forecastsData, inventoryData]) => {
+          allForecasts.value = forecastsData
+          inventoryItems.value = inventoryData
+        },
+        onError: (err) => {
+          error.value = 'Failed to load demand forecasts: ' + err.message
+        }
       }
-    }
+    )
 
     // Watch for filter changes and reload data
-    watch([selectedLocation, selectedCategory], () => {
-      loadForecasts()
-    })
+    watch([selectedLocation, selectedCategory], scheduleLoad)
 
     const getForecastsByTrend = (trend) => {
       return forecasts.value.filter(f => f.trend === trend)

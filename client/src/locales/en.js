@@ -391,6 +391,7 @@ export default {
     error: 'Error',
     noData: 'No data available',
     viewDetails: 'View Details',
+    viewDetailsFor: 'View details for {name}',
     close: 'Close',
     save: 'Save',
     cancel: 'Cancel',

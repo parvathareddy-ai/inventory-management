@@ -69,7 +69,12 @@
                 v-for="item in filteredItems"
                 :key="item.id"
                 class="clickable-row"
+                tabindex="0"
+                role="button"
+                :aria-label="t('common.viewDetailsFor', { name: translateProductName(item.name) })"
                 @click="showItemDetail(item)"
+                @keydown.enter.self.prevent="showItemDetail(item)"
+                @keydown.space.self.prevent="showItemDetail(item)"
               >
                 <td><strong>{{ item.sku }}</strong></td>
                 <td>{{ translateProductName(item.name) }}</td>
@@ -102,6 +107,7 @@
 <script>
 import { ref, onMounted, watch, computed } from 'vue'
 import { api } from '../api'
+import { useLatestRequest } from '../composables/useLatestRequest'
 import { useFilters } from '../composables/useFilters'
 import { useI18n } from '../composables/useI18n'
 import { toCsv, downloadCsv, fixedNumber, localDateStamp } from '../utils/csv'
@@ -166,26 +172,30 @@ export default {
       })
     })
 
-    const loadInventory = async () => {
-      try {
-        loading.value = true
+    // Only the newest request may apply data / loading / error; filter changes are debounced
+    const { run: loadInventory, trigger: scheduleLoad } = useLatestRequest(
+      () => {
         const filters = getCurrentFilters()
         // Inventory doesn't support month/status filters, only warehouse and category
-        items.value = await api.getInventory({
+        return api.getInventory({
           warehouse: filters.warehouse,
           category: filters.category
         })
-      } catch (err) {
-        error.value = 'Failed to load inventory: ' + err.message
-      } finally {
-        loading.value = false
+      },
+      {
+        loading,
+        error,
+        onData: (data) => {
+          items.value = data
+        },
+        onError: (err) => {
+          error.value = 'Failed to load inventory: ' + err.message
+        }
       }
-    }
+    )
 
     // Watch for filter changes and reload data
-    watch([selectedLocation, selectedCategory], () => {
-      loadInventory()
-    })
+    watch([selectedLocation, selectedCategory], scheduleLoad)
 
     const getStockStatus = (item) => {
       const key = getStockStatusKey(item)
@@ -426,5 +436,10 @@ export default {
 
 .clickable-row:hover {
   background: #eff6ff !important;
+}
+
+.clickable-row:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 </style>

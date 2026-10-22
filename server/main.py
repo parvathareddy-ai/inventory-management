@@ -1,10 +1,11 @@
 import math
 import threading
 from datetime import date, timedelta
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from mock_data import inventory_items, orders, demand_forecasts, backlog_items, spending_summary, monthly_spending, category_spending, recent_transactions, purchase_orders, restocking_catalog
 
 app = FastAPI(title="Factory Inventory Management System")
@@ -49,14 +50,26 @@ def apply_filters(items: list, warehouse: Optional[str] = None, category: Option
 
     return filtered
 
-# CORS middleware
+# CORS: only the Vite dev server may call the API from a browser. A wildcard would let any page the
+# developer visits drive the unauthenticated write endpoints. No credentials are used, so none are allowed.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PATCH", "DELETE"],
+    allow_headers=["Content-Type"],
 )
+
+# Request bodies here are small JSON objects; reject anything larger before it is parsed.
+# Requests without a Content-Length (chunked) are not covered; a reverse proxy should enforce that.
+MAX_BODY_BYTES = 64 * 1024
+
+@app.middleware("http")
+async def limit_body_size(request: Request, call_next):
+    length = request.headers.get("content-length")
+    if length is not None and length.isdigit() and int(length) > MAX_BODY_BYTES:
+        return JSONResponse(status_code=413, content={"detail": "Request body too large"})
+    return await call_next(request)
 
 # Data models
 class InventoryItem(BaseModel):
@@ -118,13 +131,19 @@ class PurchaseOrder(BaseModel):
     created_date: str
     notes: Optional[str] = None
 
+# Upper bounds keep a client from storing unbounded strings or absurd numbers in server memory
+MAX_QUANTITY = 1_000_000
+MAX_UNIT_COST = 1_000_000
+
 class CreatePurchaseOrderRequest(BaseModel):
-    backlog_item_id: str
-    supplier_name: str
-    quantity: int
+    backlog_item_id: str = Field(max_length=50)
+    supplier_name: str = Field(max_length=200)
+    quantity: int = Field(le=MAX_QUANTITY)
+    # Floats are bounds-checked in the handler: a Field(le=...) on NaN fails validation, and FastAPI
+    # cannot serialize the NaN echoed back in its own 422 response
     unit_cost: float
-    expected_delivery_date: str
-    notes: Optional[str] = None
+    expected_delivery_date: str = Field(max_length=10)
+    notes: Optional[str] = Field(default=None, max_length=1000)
 
 class RestockItem(BaseModel):
     sku: str
@@ -144,12 +163,12 @@ class RestockRecommendation(BaseModel):
     items: List[RestockItem]
 
 class RestockOrderLine(BaseModel):
-    sku: str
-    quantity: int
+    sku: str = Field(max_length=50)
+    quantity: int = Field(le=MAX_QUANTITY)
 
 class SubmitRestockOrderRequest(BaseModel):
     budget: float
-    items: List[RestockOrderLine]
+    items: List[RestockOrderLine] = Field(max_length=100)
 
 class SubmittedOrder(BaseModel):
     id: str
@@ -174,9 +193,12 @@ class Task(BaseModel):
     status: str
 
 class CreateTaskRequest(BaseModel):
-    title: str
-    priority: str = "medium"
-    dueDate: str
+    title: str = Field(max_length=200)
+    priority: str = Field(default="medium", max_length=10)
+    dueDate: str = Field(max_length=10)
+
+# Tasks are never evicted, so cap the list to stop repeated POSTs from growing memory without bound
+MAX_TASKS = 500
 
 TASK_PRIORITIES = {"low", "medium", "high"}
 
@@ -409,9 +431,10 @@ def get_restock_recommendations(budget: float = Query(allow_inf_nan=False)):
     # catalog entry to price them. Growing items come first because they risk stockouts
     # soonest; within a trend, the largest shortfall goes first.
     # Units already on submitted orders are subtracted, so the same shortfall cannot be bought twice.
-    candidates = [
-        (f, remaining_shortfall(f)) for f in demand_forecasts if f["item_sku"] in catalog
-    ]
+    with submitted_orders_lock:
+        candidates = [
+            (f, remaining_shortfall(f)) for f in demand_forecasts if f["item_sku"] in catalog
+        ]
     candidates = [(f, shortfall) for f, shortfall in candidates if shortfall > 0]
     candidates.sort(key=lambda c: (c[0]["trend"] != "increasing", -c[1]))
 
@@ -454,38 +477,39 @@ def submit_restock_order(request: SubmitRestockOrderRequest):
     if len(set(skus)) != len(skus):
         raise HTTPException(status_code=400, detail="Each SKU may appear only once per order")
 
-    lines = []
-    for line in request.items:
-        if line.quantity < 1:
-            raise HTTPException(status_code=400, detail=f"Quantity for {line.sku} must be at least 1")
-        if line.sku not in catalog or line.sku not in forecasts:
-            raise HTTPException(status_code=400, detail=f"Unknown SKU {line.sku}")
-        # Only the not-yet-ordered forecast shortfall can be restocked, so cap quantity at it
-        # (this also rejects items with flat or falling demand, whose shortfall is <= 0)
-        shortfall = remaining_shortfall(forecasts[line.sku])
-        if line.quantity > shortfall:
-            raise HTTPException(status_code=400, detail=f"Quantity for {line.sku} exceeds its forecast shortfall of {max(shortfall, 0)}")
-        lines.append(build_restock_item(forecasts[line.sku], catalog[line.sku], line.quantity, shortfall))
-
-    total_cost = round(sum(l["line_total"] for l in lines), 2)
-    if total_cost > request.budget:
-        raise HTTPException(status_code=400, detail="Order total exceeds the budget")
-
-    # Items ship from different suppliers, so the order is complete when the slowest one arrives
-    overall_lead_time = max(l["lead_time_days"] for l in lines)
-    today = date.today()
-    order = {
-        "id": "",  # assigned under the lock below
-        "order_date": today.isoformat(),
-        "budget": request.budget,
-        "total_cost": total_cost,
-        "items": lines,
-        "overall_lead_time_days": overall_lead_time,
-        "expected_delivery": (today + timedelta(days=overall_lead_time)).isoformat(),
-        "status": "Submitted",
-    }
+    # The shortfall check, the budget check and the append run under one lock. Checked outside it,
+    # two concurrent orders for the same SKU could both pass and together exceed its shortfall.
     with submitted_orders_lock:
-        order["id"] = f"RST-{len(submitted_orders) + 1:04d}"
+        lines = []
+        for line in request.items:
+            if line.quantity < 1:
+                raise HTTPException(status_code=400, detail=f"Quantity for {line.sku} must be at least 1")
+            if line.sku not in catalog or line.sku not in forecasts:
+                raise HTTPException(status_code=400, detail=f"Unknown SKU {line.sku}")
+            # Only the not-yet-ordered forecast shortfall can be restocked, so cap quantity at it
+            # (this also rejects items with flat or falling demand, whose shortfall is <= 0)
+            shortfall = remaining_shortfall(forecasts[line.sku])
+            if line.quantity > shortfall:
+                raise HTTPException(status_code=400, detail=f"Quantity for {line.sku} exceeds its forecast shortfall of {max(shortfall, 0)}")
+            lines.append(build_restock_item(forecasts[line.sku], catalog[line.sku], line.quantity, shortfall))
+
+        total_cost = round(sum(l["line_total"] for l in lines), 2)
+        if total_cost > request.budget:
+            raise HTTPException(status_code=400, detail="Order total exceeds the budget")
+
+        # Items ship from different suppliers, so the order is complete when the slowest one arrives
+        overall_lead_time = max(l["lead_time_days"] for l in lines)
+        today = date.today()
+        order = {
+            "id": f"RST-{len(submitted_orders) + 1:04d}",
+            "order_date": today.isoformat(),
+            "budget": request.budget,
+            "total_cost": total_cost,
+            "items": lines,
+            "overall_lead_time_days": overall_lead_time,
+            "expected_delivery": (today + timedelta(days=overall_lead_time)).isoformat(),
+            "status": "Submitted",
+        }
         submitted_orders.append(order)
     return order
 
@@ -514,6 +538,8 @@ def create_task(request: CreateTaskRequest):
 
     global next_task_id
     with tasks_lock:
+        if len(tasks) >= MAX_TASKS:
+            raise HTTPException(status_code=409, detail=f"Task limit of {MAX_TASKS} reached; delete some tasks first")
         task = {"id": next_task_id, "title": title, "priority": request.priority,
                 "dueDate": request.dueDate, "status": "pending"}
         next_task_id += 1
@@ -551,6 +577,8 @@ def create_purchase_order(request: CreatePurchaseOrderRequest):
     # NaN/inf would pass a plain < 0 check and then break JSON serialization of the response
     if not math.isfinite(request.unit_cost) or request.unit_cost < 0:
         raise HTTPException(status_code=400, detail="Unit cost must be a non-negative number")
+    if request.unit_cost > MAX_UNIT_COST:
+        raise HTTPException(status_code=400, detail=f"Unit cost must not exceed {MAX_UNIT_COST}")
     try:
         delivery = date.fromisoformat(request.expected_delivery_date)
     except ValueError:
@@ -587,4 +615,6 @@ def get_purchase_order_for_backlog_item(backlog_item_id: str):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    # Loopback only: the write endpoints have no authentication, so the API must not be reachable
+    # from other machines on the network. Put a reverse proxy with auth in front to expose it.
+    uvicorn.run(app, host="127.0.0.1", port=8001)

@@ -391,6 +391,7 @@ export default {
     error: 'エラー',
     noData: 'データがありません',
     viewDetails: '詳細を見る',
+    viewDetailsFor: '{name} の詳細を見る',
     close: '閉じる',
     save: '保存',
     cancel: 'キャンセル',
